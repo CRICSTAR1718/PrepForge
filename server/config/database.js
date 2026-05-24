@@ -1,16 +1,15 @@
-const mongoose = require("mongoose");
-const URL = process.env.MONGODB_URL;
+import mongoose from "mongoose";
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(URL, {
+        const conn = await mongoose.connect(process.env.MONGODB_URL, {
             dbName: "prep-forge",
         });
-        console.log("------- DB Connected -------");
+        console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (err) {
-        console.log("---- DB Connection Failed -----", err.message);
+        console.error(`DB Connection Failed: ${err.message}`);
+        process.exit(1); // stop the server if DB fails
     }
 };
 
-module.exports = connectDB;
-
+export default connectDB;
