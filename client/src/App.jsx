@@ -3,6 +3,8 @@ import { useAuth } from "./context/AuthContext";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Onboarding from "./pages/Onboarding";
+import Plan from "./pages/Plan";
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -20,6 +22,8 @@ export default function App() {
         </ProtectedRoute>
       } />
       <Route path="*" element={<Navigate to="/login" />} />
+      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+      <Route path="/plan" element={<ProtectedRoute><Plan /></ProtectedRoute>} />
     </Routes>
   );
 }
