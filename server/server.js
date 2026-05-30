@@ -6,6 +6,7 @@ import cors from "cors";
 import connectDB from "./config/database.js";
 import authRoutes from "./routes/auth.js";
 import planRoutes from "./routes/plans.js";
+import logRoutes from "./routes/logs.js";
 
 const app = express();
 
@@ -16,6 +17,8 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/plans", planRoutes);
+app.use("/api/logs", logRoutes);
+
 const PORT = process.env.PORT ?? 5000;
 
 connectDB().then(() => {
