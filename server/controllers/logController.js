@@ -14,7 +14,19 @@ export const getOrCreateTodayLog = async (req, res) => {
         let log = await DailyLog.findOne({ userId, date: today });
 
         if (log) {
-            return res.status(200).json({ success: true, data: log });
+            const plan = await Plan.findById(log.planId);
+            const planStartDate = new Date(plan.createdAt).toISOString().split("T")[0];
+            const msPerDay = 1000 * 60 * 60 * 24;
+            const dayIndex = Math.floor((new Date(today) - new Date(planStartDate)) / msPerDay);
+            const todayPlanDay = plan.days[dayIndex] || null;
+
+            if (todayPlanDay?.tasks) {
+                todayPlanDay.tasks = todayPlanDay.tasks.map((t) =>
+                    typeof t === "string" ? t : t.title || t.description || JSON.stringify(t)
+                );
+            }
+
+            return res.status(200).json({ success: true, data: log, planDay: todayPlanDay });
         }
 
         // 2. No log yet — fetch the user's active plan
@@ -37,6 +49,12 @@ export const getOrCreateTodayLog = async (req, res) => {
 
         // 4. Get today's tasks from the plan
         const todayPlanDay = plan.days[dayIndex] || null;
+        // Normalize tasks to strings regardless of what OpenAI returned
+        if (todayPlanDay?.tasks) {
+            todayPlanDay.tasks = todayPlanDay.tasks.map((t) =>
+                typeof t === "string" ? t : t.title || t.description || JSON.stringify(t)
+            );
+        }
         const prefillTasks = todayPlanDay ? todayPlanDay.tasks : [];
 
         // 5. Create a fresh draft log pre-filled with today's tasks
