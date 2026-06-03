@@ -1,5 +1,7 @@
 import DailyLog from "../models/DailyLog.js";
 import Plan from "../models/Plan.js";
+import User from "../models/User.js";
+import { evaluateLog } from "../services/evaluator.js";
 
 // Helper: get today's date as "YYYY-MM-DD"
 const getTodayString = () => new Date().toISOString().split("T")[0];
@@ -128,23 +130,87 @@ export const submitLog = async (req, res) => {
         const { id } = req.params;
 
         const log = await DailyLog.findOne({ _id: id, userId });
-        if (!log) {
-            return res.status(404).json({ success: false, message: "Log not found." });
-        }
-        if (log.submitted) {
-            return res.status(400).json({
-                success: false,
-                message: "Already submitted.",
-            });
-        }
+        if (!log) return res.status(404).json({ success: false, message: "Log not found." });
+        if (log.submitted) return res.status(400).json({ success: false, message: "Already submitted." });
 
+        // Mark submitted immediately — frontend gets response right away
         log.submitted = true;
         log.evaluationPending = true;
         await log.save();
 
-        return res.status(200).json({ success: true, data: log });
+        // Send response NOW — evaluation runs in background after this
+        res.status(200).json({ success: true, data: log });
+
+        // ── Background: call Gemini ──────────────────────────────────────────
+        try {
+            const user = await User.findById(userId);
+            const domain = user?.domain || "DSA";
+
+            // Get planned tasks for context
+            let plannedTasks = [];
+            if (log.planId) {
+                const plan = await Plan.findById(log.planId);
+                if (plan) {
+                    const today = log.date;
+                    const planStartDate = new Date(plan.createdAt).toISOString().split("T")[0];
+                    const msPerDay = 1000 * 60 * 60 * 24;
+                    const dayIndex = Math.floor((new Date(today) - new Date(planStartDate)) / msPerDay);
+                    const todayPlan = plan.days[dayIndex];
+                    if (todayPlan?.tasks) {
+                        plannedTasks = todayPlan.tasks.map((t) =>
+                            typeof t === "string" ? t : t.title || t.description || JSON.stringify(t)
+                        );
+                    }
+                }
+            }
+
+            const evaluation = await evaluateLog({
+                domain,
+                plannedTasks,
+                tasksCompleted: log.tasksCompleted,
+                timeSpentMinutes: log.timeSpentMinutes,
+                notes: log.notes,
+                difficultyRating: log.difficultyRating,
+            });
+
+            log.evaluation = {
+                score: evaluation.score,
+                feedback: evaluation.feedback,
+                suggestions: evaluation.suggestions,
+            };
+            log.evaluationPending = false;
+            await log.save();
+
+            console.log(`✅ Evaluation done for log ${id} — Score: ${evaluation.score}`);
+        } catch (evalError) {
+            // Gemini failed — save error message so frontend can show it
+            console.error(`❌ Evaluation failed for log ${id}:`, evalError.message);
+            log.evaluation = {
+                score: null,
+                feedback: "Evaluation failed. Please contact support.",
+                suggestions: [],
+            };
+            log.evaluationPending = false;
+            await log.save();
+        }
+
     } catch (error) {
         console.error("submitLog error:", error);
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+export const getLogById = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id } = req.params;
+
+        const log = await DailyLog.findOne({ _id: id, userId });
+        if (!log) return res.status(404).json({ success: false, message: "Log not found." });
+
+        return res.status(200).json({ success: true, data: log });
+    } catch (error) {
+        console.error("getLogById error:", error);
         return res.status(500).json({ success: false, message: "Server error" });
     }
 };
