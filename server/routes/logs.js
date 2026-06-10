@@ -11,7 +11,7 @@ import protect  from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 router.get("/today", protect, getOrCreateTodayLog);
-router.get("/:id", getLogById);
+router.get("/:id", protect, getLogById);
 router.get("/", protect, getAllLogs);
 router.put("/:id", protect, saveDraftLog);
 router.post("/:id/submit", protect, submitLog);

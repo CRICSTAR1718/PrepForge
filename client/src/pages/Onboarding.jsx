@@ -10,7 +10,7 @@ const Onboarding = () => {
         try {
             await generatePlan(domain, durationDays);
             navigate("/plan");
-        } catch (_err) {
+        } catch {
             // error is already set in usePlan, shown below
         }
     };

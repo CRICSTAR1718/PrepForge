@@ -1,5 +1,3 @@
-import React from "react";
-
 const DIFFICULTY_LABELS = {
     1: "Very easy",
     2: "Easy",

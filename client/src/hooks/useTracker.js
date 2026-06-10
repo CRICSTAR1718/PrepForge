@@ -1,143 +1,172 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { getTodayLog, saveDraft, submitLog } from "../services/logService";
+// client/src/hooks/useTracker.js
 
-export const useTracker = () => {
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { getTodayLog, saveDraft, submitLog, getLogById } from '../services/logService.js';
+import { useDebounce } from './useDebounce.js';
+
+export function useTracker() {
     const [log, setLog] = useState(null);
-    const [planDay, setPlanDay] = useState(null);
+    const [planDay, setPlanDay] = useState(null);       // ← NEW: today's plan data
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [submitDone, setSubmitDone] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitDone, setSubmitDone] = useState(false); // ← NEW: replaces polling flag for UI
     const [error, setError] = useState(null);
 
-    // Form state — mirrors the log fields
-    const [tasksCompleted, setTasksCompleted] = useState([]);
-    const [timeSpentMinutes, setTimeSpentMinutes] = useState(0);
-    const [notes, setNotes] = useState("");
-    const [difficultyRating, setDifficultyRating] = useState(null);
+    const pollIntervalRef = useRef(null);
+    const lastSavedFormRef = useRef(null);
 
-    // Auto-save debounce ref
-    const autoSaveTimer = useRef(null);
-    const isDirty = useRef(false);
+    const [formState, setFormState] = useState({
+        tasksCompleted: [],
+        timeSpentMinutes: 0,
+        notes: '',
+        difficultyRating: 3,
+    });
 
-    // Load today's log on mount
-    useEffect(() => {
-        (async () => {
+    const stopPolling = useCallback(() => {
+        if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+        }
+    }, []);
+
+    const startPolling = useCallback((logId) => {
+        stopPolling();
+        pollIntervalRef.current = setInterval(async () => {
             try {
-                const { data, planDay: pd } = await getTodayLog();
+                const updated = await getLogById(logId);
+                setLog(updated);
+                if (!updated.evaluationPending) {
+                    stopPolling();
+                }
+            } catch {
+                // continue polling on transient errors
+            }
+        }, 2000);
+    }, [stopPolling]);
+
+    // ── Load today's log on mount ──────────────────────────────────────────────
+    useEffect(() => {
+        async function loadLog() {
+            try {
+                setLoading(true);
+                const { log: data, planDay: pd } = await getTodayLog(); // ← destructure both
+                const initialFormState = {
+                    tasksCompleted: data.tasksCompleted || [],
+                    timeSpentMinutes: data.timeSpentMinutes || 0,
+                    notes: data.notes || '',
+                    difficultyRating: data.difficultyRating || 3,
+                };
+
                 setLog(data);
                 setPlanDay(pd);
-                // Pre-fill form from existing log
-                setTasksCompleted(data.tasksCompleted || []);
-                setTimeSpentMinutes(data.timeSpentMinutes || 0);
-                setNotes(data.notes || "");
-                setDifficultyRating(data.difficultyRating || null);
-                if (data.submitted) setSubmitDone(true);
+                setFormState(initialFormState);
+                lastSavedFormRef.current = JSON.stringify(initialFormState);
+
+                // If already submitted today, mark done and resume polling if pending
+                if (data.submitted) {
+                    setSubmitDone(true);
+                    if (data.evaluationPending) {
+                        startPolling(data._id);
+                    }
+                }
             } catch (err) {
-                setError(err.response?.data?.message || "Failed to load today's log.");
+                setError(err.response?.data?.message || 'Failed to load today\'s log');
             } finally {
                 setLoading(false);
             }
-        })();
+        }
+        loadLog();
+        return () => stopPolling();
+    }, [startPolling, stopPolling]);
+
+    const debouncedFormState = useDebounce(formState, 1500);
+
+    // Auto-save on debounced change
+    useEffect(() => {
+        if (!log || log.submitted || loading) return;
+        const serializedForm = JSON.stringify(debouncedFormState);
+        if (serializedForm === lastSavedFormRef.current) return;
+
+        async function autoSave() {
+            try {
+                setSaving(true);
+                const updated = await saveDraft(log._id, debouncedFormState);
+                setLog(updated);
+                lastSavedFormRef.current = serializedForm;
+            } catch {
+                // silent fail
+            } finally {
+                setSaving(false);
+            }
+        }
+        autoSave();
+    }, [debouncedFormState, loading, log]);
+
+    // ── Field handlers — named to match TrackerForm props ─────────────────────
+    const toggleTask = useCallback((task) => {
+        setFormState((prev) => {
+            const already = prev.tasksCompleted.includes(task);
+            return {
+                ...prev,
+                tasksCompleted: already
+                    ? prev.tasksCompleted.filter((t) => t !== task)
+                    : [...prev.tasksCompleted, task],
+            };
+        });
     }, []);
 
-    // Auto-save: fires 1 second after user stops typing / interacting
-    const scheduleAutoSave = useCallback(
-        (newState) => {
-            if (!log || submitDone) return;
-            isDirty.current = true;
-            clearTimeout(autoSaveTimer.current);
-            autoSaveTimer.current = setTimeout(async () => {
-                if (!isDirty.current) return;
-                setSaving(true);
-                try {
-                    const { data } = await saveDraft(log._id, newState);
-                    setLog(data);
-                    isDirty.current = false;
-                } catch {
-                    // silent fail on auto-save
-                } finally {
-                    setSaving(false);
-                }
-            }, 1000);
-        },
-        [log, submitDone]
-    );
+    const handleTimeChange = useCallback((minutes) => {    // ← matches TrackerForm
+        setFormState((prev) => ({ ...prev, timeSpentMinutes: Number(minutes) }));
+    }, []);
 
-    // Handlers — each updates state AND triggers auto-save
-    const toggleTask = useCallback(
-        (task) => {
-            setTasksCompleted((prev) => {
-                const next = prev.includes(task)
-                    ? prev.filter((t) => t !== task)
-                    : [...prev, task];
-                scheduleAutoSave({ tasksCompleted: next, timeSpentMinutes, notes, difficultyRating });
-                return next;
-            });
-        },
-        [timeSpentMinutes, notes, difficultyRating, scheduleAutoSave]
-    );
+    const handleNotesChange = useCallback((notes) => {     // ← matches TrackerForm
+        setFormState((prev) => ({ ...prev, notes }));
+    }, []);
 
-    const handleTimeChange = useCallback(
-        (val) => {
-            const num = Math.max(0, Number(val));
-            setTimeSpentMinutes(num);
-            scheduleAutoSave({ tasksCompleted, timeSpentMinutes: num, notes, difficultyRating });
-        },
-        [tasksCompleted, notes, difficultyRating, scheduleAutoSave]
-    );
+    const handleDifficultyChange = useCallback((rating) => { // ← matches TrackerForm
+        setFormState((prev) => ({ ...prev, difficultyRating: Number(rating) }));
+    }, []);
 
-    const handleNotesChange = useCallback(
-        (val) => {
-            setNotes(val);
-            scheduleAutoSave({ tasksCompleted, timeSpentMinutes, notes: val, difficultyRating });
-        },
-        [tasksCompleted, timeSpentMinutes, difficultyRating, scheduleAutoSave]
-    );
-
-    const handleDifficultyChange = useCallback(
-        (val) => {
-            setDifficultyRating(val);
-            scheduleAutoSave({ tasksCompleted, timeSpentMinutes, notes, difficultyRating: val });
-        },
-        [tasksCompleted, timeSpentMinutes, notes, scheduleAutoSave]
-    );
-
-    // Manual submit
+    // ── Submit ─────────────────────────────────────────────────────────────────
     const handleSubmit = useCallback(async () => {
-        if (!log || submitDone) return;
-        clearTimeout(autoSaveTimer.current);
-        setSaving(true);
+        if (!log || log.submitted) return;
         try {
-            // Save latest state first, then submit
-            await saveDraft(log._id, { tasksCompleted, timeSpentMinutes, notes, difficultyRating });
-            const { data } = await submitLog(log._id);
-            setLog(data);
-            setSubmitDone(true);
+            setSubmitting(true);
+            setError(null);
+
+            await saveDraft(log._id, formState);
+            lastSavedFormRef.current = JSON.stringify(formState);
+            const submitted = await submitLog(log._id);
+            setLog(submitted);
+            setSubmitDone(true);       // ← tells Tracker.jsx to show the banner + button
+            startPolling(submitted._id);
         } catch (err) {
-            setError(err.response?.data?.message || "Failed to submit log.");
+            setError(err.response?.data?.message || 'Submission failed. Please try again.');
         } finally {
-            setSaving(false);
+            setSubmitting(false);
         }
-    }, [log, submitDone, tasksCompleted, timeSpentMinutes, notes, difficultyRating]);
+    }, [log, formState, startPolling]);
 
-    // Cleanup timer on unmount
-    useEffect(() => () => clearTimeout(autoSaveTimer.current), []);
-
+    // ── Return — all names match what Tracker.jsx + TrackerForm.jsx expect ─────
     return {
         log,
-        planDay,
+        planDay,               // ← used by Tracker.jsx header and TrackerForm
         loading,
         saving,
-        submitDone,
+        submitting,
+        submitDone,            // ← used by Tracker.jsx banner and TrackerForm submit button
         error,
-        tasksCompleted,
-        timeSpentMinutes,
-        notes,
-        difficultyRating,
+        // form state
+        tasksCompleted: formState.tasksCompleted,
+        timeSpentMinutes: formState.timeSpentMinutes,
+        notes: formState.notes,
+        difficultyRating: formState.difficultyRating,
+        // handlers — names match TrackerForm props exactly
         toggleTask,
         handleTimeChange,
         handleNotesChange,
         handleDifficultyChange,
         handleSubmit,
     };
-};
+}

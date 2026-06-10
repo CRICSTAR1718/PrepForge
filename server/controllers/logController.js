@@ -1,3 +1,5 @@
+// server/controllers/logController.js
+
 import DailyLog from "../models/DailyLog.js";
 import Plan from "../models/Plan.js";
 import User from "../models/User.js";
@@ -6,32 +8,41 @@ import { evaluateLog } from "../services/evaluator.js";
 // Helper: get today's date as "YYYY-MM-DD"
 const getTodayString = () => new Date().toISOString().split("T")[0];
 
+// Helper: normalize plan tasks to plain strings
+const normalizeTasks = (tasks = []) =>
+    tasks.map((t) =>
+        typeof t === "string" ? t : t.title || t.description || JSON.stringify(t)
+    );
+
+// ─────────────────────────────────────────────
 // GET /api/logs/today
+// Returns today's log if it exists, or creates a fresh one
+// ─────────────────────────────────────────────
 export const getOrCreateTodayLog = async (req, res) => {
     try {
         const userId = req.user.id;
         const today = getTodayString();
 
-        // 1. Check if a log already exists for today
+        // Check if a log already exists for today
         let log = await DailyLog.findOne({ userId, date: today });
 
         if (log) {
             const plan = await Plan.findById(log.planId);
             const planStartDate = new Date(plan.createdAt).toISOString().split("T")[0];
             const msPerDay = 1000 * 60 * 60 * 24;
-            const dayIndex = Math.floor((new Date(today) - new Date(planStartDate)) / msPerDay);
+            const dayIndex = Math.floor(
+                (new Date(today) - new Date(planStartDate)) / msPerDay
+            );
             const todayPlanDay = plan.days[dayIndex] || null;
 
             if (todayPlanDay?.tasks) {
-                todayPlanDay.tasks = todayPlanDay.tasks.map((t) =>
-                    typeof t === "string" ? t : t.title || t.description || JSON.stringify(t)
-                );
+                todayPlanDay.tasks = normalizeTasks(todayPlanDay.tasks);
             }
 
             return res.status(200).json({ success: true, data: log, planDay: todayPlanDay });
         }
 
-        // 2. No log yet — fetch the user's active plan
+        // No log yet — fetch the user's active plan
         const plan = await Plan.findOne({ userId }).sort({ createdAt: -1 });
 
         if (!plan) {
@@ -41,40 +52,40 @@ export const getOrCreateTodayLog = async (req, res) => {
             });
         }
 
-        // 3. Figure out which day of the plan today is (Day 1, Day 2, etc.)
+        // Figure out which day of the plan today is
         const planStartDate = new Date(plan.createdAt).toISOString().split("T")[0];
         const msPerDay = 1000 * 60 * 60 * 24;
-        const dayIndex =
-            Math.floor(
-                (new Date(today) - new Date(planStartDate)) / msPerDay
-            );
+        const dayIndex = Math.floor(
+            (new Date(today) - new Date(planStartDate)) / msPerDay
+        );
 
-        // 4. Get today's tasks from the plan
+        // Get today's plan tasks
         const todayPlanDay = plan.days[dayIndex] || null;
-        // Normalize tasks to strings regardless of what OpenAI returned
         if (todayPlanDay?.tasks) {
-            todayPlanDay.tasks = todayPlanDay.tasks.map((t) =>
-                typeof t === "string" ? t : t.title || t.description || JSON.stringify(t)
-            );
+            todayPlanDay.tasks = normalizeTasks(todayPlanDay.tasks);
         }
-        const prefillTasks = todayPlanDay ? todayPlanDay.tasks : [];
 
-        // 5. Create a fresh draft log pre-filled with today's tasks
+        const plannedTasks = todayPlanDay?.tasks || [];
+
+        // Create a fresh draft log
         log = await DailyLog.create({
             userId,
             planId: plan._id,
             date: today,
-            tasksCompleted: [],   // none checked yet
+            dayNumber: dayIndex + 1,
+            plannedTasks,
+            tasksCompleted: [],
             timeSpentMinutes: 0,
             notes: "",
+            difficultyRating: 3,
             submitted: false,
+            evaluationPending: false,
         });
 
-        // 6. Return the log + today's plan tasks so frontend can show the checklist
         return res.status(201).json({
             success: true,
             data: log,
-            planDay: todayPlanDay,   // { day, topic, tasks[], estimatedMinutes }
+            planDay: todayPlanDay,
         });
     } catch (error) {
         console.error("getOrCreateTodayLog error:", error);
@@ -82,24 +93,22 @@ export const getOrCreateTodayLog = async (req, res) => {
     }
 };
 
+// ─────────────────────────────────────────────
 // PUT /api/logs/:id
+// Save draft — no evaluation triggered
+// ─────────────────────────────────────────────
 export const saveDraftLog = async (req, res) => {
     try {
         const userId = req.user.id;
         const { id } = req.params;
         const { tasksCompleted, timeSpentMinutes, notes, difficultyRating } = req.body;
 
-        // 1. Find the log and make sure it belongs to this user
         const log = await DailyLog.findOne({ _id: id, userId });
 
         if (!log) {
-            return res.status(404).json({
-                success: false,
-                message: "Log not found.",
-            });
+            return res.status(404).json({ success: false, message: "Log not found." });
         }
 
-        // 2. Block edits if already submitted
         if (log.submitted) {
             return res.status(400).json({
                 success: false,
@@ -107,7 +116,6 @@ export const saveDraftLog = async (req, res) => {
             });
         }
 
-        // 3. Update only the fields that were sent
         if (tasksCompleted !== undefined) log.tasksCompleted = tasksCompleted;
         if (timeSpentMinutes !== undefined) log.timeSpentMinutes = timeSpentMinutes;
         if (notes !== undefined) log.notes = notes;
@@ -122,44 +130,50 @@ export const saveDraftLog = async (req, res) => {
     }
 };
 
-
+// ─────────────────────────────────────────────
 // POST /api/logs/:id/submit
+// Submits the log, then calls Gemini in the background
+// Client gets an instant response — polls GET /logs/:id for result
+// ─────────────────────────────────────────────
 export const submitLog = async (req, res) => {
     try {
         const userId = req.user.id;
         const { id } = req.params;
 
         const log = await DailyLog.findOne({ _id: id, userId });
-        if (!log) return res.status(404).json({ success: false, message: "Log not found." });
-        if (log.submitted) return res.status(400).json({ success: false, message: "Already submitted." });
+        if (!log) {
+            return res.status(404).json({ success: false, message: "Log not found." });
+        }
+        if (log.submitted) {
+            return res.status(400).json({ success: false, message: "Already submitted." });
+        }
 
-        // Mark submitted immediately — frontend gets response right away
+        // Mark submitted immediately so frontend knows it's locked
         log.submitted = true;
         log.evaluationPending = true;
         await log.save();
 
-        // Send response NOW — evaluation runs in background after this
+        // Respond to the client right away — don't make them wait for Gemini
         res.status(200).json({ success: true, data: log });
 
-        // ── Background: call Gemini ──────────────────────────────────────────
+        // ── Run Gemini evaluation in background ──────────────────────────────
         try {
             const user = await User.findById(userId);
             const domain = user?.domain || "DSA";
 
-            // Get planned tasks for context
+            // Get this day's planned tasks from the plan for evaluation context
             let plannedTasks = [];
             if (log.planId) {
                 const plan = await Plan.findById(log.planId);
                 if (plan) {
-                    const today = log.date;
                     const planStartDate = new Date(plan.createdAt).toISOString().split("T")[0];
                     const msPerDay = 1000 * 60 * 60 * 24;
-                    const dayIndex = Math.floor((new Date(today) - new Date(planStartDate)) / msPerDay);
+                    const dayIndex = Math.floor(
+                        (new Date(log.date) - new Date(planStartDate)) / msPerDay
+                    );
                     const todayPlan = plan.days[dayIndex];
                     if (todayPlan?.tasks) {
-                        plannedTasks = todayPlan.tasks.map((t) =>
-                            typeof t === "string" ? t : t.title || t.description || JSON.stringify(t)
-                        );
+                        plannedTasks = normalizeTasks(todayPlan.tasks);
                     }
                 }
             }
@@ -183,30 +197,35 @@ export const submitLog = async (req, res) => {
 
             console.log(`✅ Evaluation done for log ${id} — Score: ${evaluation.score}`);
         } catch (evalError) {
-            // Gemini failed — save error message so frontend can show it
+            // Gemini failed — save error state so frontend doesn't poll forever
             console.error(`❌ Evaluation failed for log ${id}:`, evalError.message);
             log.evaluation = {
                 score: null,
-                feedback: "Evaluation failed. Please contact support.",
+                feedback: "Evaluation failed. Please try again later.",
                 suggestions: [],
             };
             log.evaluationPending = false;
             await log.save();
         }
-
     } catch (error) {
         console.error("submitLog error:", error);
         return res.status(500).json({ success: false, message: "Server error" });
     }
 };
 
+// ─────────────────────────────────────────────
+// GET /api/logs/:id
+// Fetch a single log by ID — used by frontend to poll for evaluation result
+// ─────────────────────────────────────────────
 export const getLogById = async (req, res) => {
     try {
         const userId = req.user.id;
         const { id } = req.params;
 
         const log = await DailyLog.findOne({ _id: id, userId });
-        if (!log) return res.status(404).json({ success: false, message: "Log not found." });
+        if (!log) {
+            return res.status(404).json({ success: false, message: "Log not found." });
+        }
 
         return res.status(200).json({ success: true, data: log });
     } catch (error) {
@@ -215,7 +234,10 @@ export const getLogById = async (req, res) => {
     }
 };
 
+// ─────────────────────────────────────────────
 // GET /api/logs
+// Fetch all logs for the current user — used by dashboard
+// ─────────────────────────────────────────────
 export const getAllLogs = async (req, res) => {
     try {
         const userId = req.user.id;

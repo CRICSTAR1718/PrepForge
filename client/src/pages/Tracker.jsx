@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useTracker } from "../hooks/useTracker";
 import TrackerForm from "../components/forms/TrackerForm";
@@ -68,19 +67,25 @@ const Tracker = () => {
                         {planDay?.estimatedMinutes ? ` · ~${planDay.estimatedMinutes} min` : ""}
                     </p>
                 </div>
-
-                {/* Submitted banner */}
-                {submitDone && (
+                
+                {/* Submitted — navigate to result page */}
+                {submitDone && log?._id && (
                     <div className="mb-6 bg-white dark:bg-gray-900 border border-green-200 dark:border-green-800 rounded-2xl px-5 py-4 flex items-start gap-3">
                         <span className="text-green-500 text-lg">✓</span>
-                        <div>
+                        <div className="flex-1">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">
                                 Day submitted!
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                Your AI evaluation is being prepared. Check the dashboard soon.
+                                Your AI evaluation is being prepared...
                             </p>
                         </div>
+                        <button
+                            onClick={() => navigate("/result", { state: { logId: log._id } })}
+                            className="text-sm font-semibold text-indigo-500 hover:text-indigo-400 transition-colors whitespace-nowrap"
+                        >
+                            View Result →
+                        </button>
                     </div>
                 )}
 

@@ -2,10 +2,8 @@
 // Calls Gemini API to evaluate a student's daily log
 // Uses @google/generative-ai package — install with: npm install @google/generative-ai
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import geminiModel from './openai/openaiClient.js';
 import { buildEvaluationPrompt } from './openai/prompts.js';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 /**
  * Evaluates a daily log and returns score, feedback, and suggestions.
@@ -30,9 +28,7 @@ export async function evaluateLog({ domain, plannedTasks, tasksCompleted, timeSp
         difficultyRating,
     });
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    const result = await model.generateContent(prompt);
+    const result = await geminiModel.generateContent(prompt);
     const rawText = result.response.text();
 
     // Strip markdown code fences if Gemini wraps the JSON in ```json ... ```
