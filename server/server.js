@@ -21,6 +21,34 @@ app.use("/api/plans", planRoutes);
 app.use("/api/logs", logRoutes);
 app.use("/api/mentor", mentorRouter);
 
+// Health check for Gemini API key
+app.get("/api/health/gemini", (req, res) => {
+    const hasKey = !!process.env.GEMINI_API_KEY;
+    res.json({
+        geminiConfigured: hasKey,
+        message: hasKey ? "Gemini API key is configured" : "Gemini API key is NOT configured",
+    });
+});
+
+// Test Gemini endpoint
+app.get("/api/test/gemini", async (req, res) => {
+    try {
+        const { GoogleGenerativeAI } = await import("@google/generative-ai");
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+        const result = await model.generateContent("Say hello briefly");
+        res.json({
+            success: true,
+            message: result.response.text(),
+        });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: err.message,
+        });
+    }
+});
+
 const PORT = process.env.PORT ?? 5000;
 
 connectDB().then(() => {

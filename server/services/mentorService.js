@@ -51,18 +51,57 @@ function toGeminiHistory(messages) {
 }
 
 export async function getMentorReply(messages, context) {
-    const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
-        systemInstruction: buildSystemPrompt(context),
-    });
+    try {
+        if (!process.env.GEMINI_API_KEY) {
+            throw new Error("GEMINI_API_KEY is not configured");
+        }
 
-    // Split history (all but last) and the current user message
-    const history = toGeminiHistory(messages.slice(0, -1));
-    const lastMessage = messages[messages.length - 1];
+        // Try multiple model names to find one that works
+        const modelOptions = ["gemini-1.5-pro", "gemini-pro"];
+        let lastError = null;
 
-    const chat = model.startChat({ history });
-    const result = await chat.sendMessage(lastMessage.content);
-    const text = result.response.text();
+        for (const modelName of modelOptions) {
+            try {
+                console.log(`[MentorService] Trying model: ${modelName}`);
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    systemInstruction: buildSystemPrompt(context),
+                });
 
-    return text;
+                // Split history (all but last) and the current user message
+                const history = toGeminiHistory(messages.slice(0, -1));
+                const lastMessage = messages[messages.length - 1];
+
+                if (!lastMessage || lastMessage.role !== "user") {
+                    throw new Error("Last message must be from user");
+                }
+
+                const chat = model.startChat({ history });
+                const result = await chat.sendMessage(lastMessage.content);
+
+                // Extract text from the response
+                const text = result.response.text();
+                if (!text) {
+                    throw new Error("Empty response from Gemini API");
+                }
+
+                console.log(`[MentorService] Success with model: ${modelName}`);
+                return text;
+            } catch (modelError) {
+                console.warn(`[MentorService] Model ${modelName} failed:`, modelError.message);
+                lastError = modelError;
+                continue;
+            }
+        }
+
+        // If all models failed, throw the last error
+        throw lastError || new Error("No available Gemini models");
+    } catch (error) {
+        console.error("[MentorService] Error calling Gemini API:", {
+            message: error.message,
+            code: error.code,
+            status: error.status,
+        });
+        throw error;
+    }
 }

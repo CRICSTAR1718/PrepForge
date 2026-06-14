@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { getMyPlan } from "../services/planService";
 
 export default function Login() {
     const navigate = useNavigate();
@@ -23,7 +24,15 @@ export default function Login() {
         try {
             const res = await api.post("/auth/login", form);
             login(res.data.user, res.data.accessToken, res.data.refreshToken);
-            navigate("/dashboard");
+
+            // Check if user has a plan; if not, redirect to onboarding
+            try {
+                const plan = await getMyPlan();
+                navigate(plan ? "/dashboard" : "/onboarding");
+            } catch {
+                // No plan found, redirect to onboarding
+                navigate("/onboarding");
+            }
         } catch (err) {
             setError(err.response?.data?.message || "Login failed");
         } finally {
