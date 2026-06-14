@@ -13,8 +13,8 @@ export const chat = async (req, res) => {
 
         // Gather context: current plan + recent scores
         let context = {
-            domain: req.user.domain || "General",
-            planDuration: req.user.planDuration || 30,
+            domain: "General",
+            planDuration: 30,
             currentDay: null,
             recentScores: [],
             todayTopic: null,
@@ -24,6 +24,10 @@ export const chat = async (req, res) => {
             try {
                 const plan = await Plan.findById(req.user.currentPlanId);
                 if (plan) {
+                    // Pull domain and duration from the Plan document (not req.user)
+                    context.domain = plan.domain || "General";
+                    context.planDuration = plan.durationDays || 30;
+
                     // Figure out which day the user is on
                     const createdAt = new Date(plan.createdAt);
                     const now = new Date();
@@ -43,7 +47,7 @@ export const chat = async (req, res) => {
         // Recent 3 submitted logs with scores
         try {
             const recentLogs = await DailyLog.find({
-                userId: userId,
+                userId,
                 submitted: true,
                 "evaluation.score": { $exists: true },
             })
