@@ -24,18 +24,36 @@ export const chat = async (req, res) => {
             try {
                 const plan = await Plan.findById(req.user.currentPlanId);
                 if (plan) {
-                    // Pull domain and duration from the Plan document (not req.user)
                     context.domain = plan.domain || "General";
                     context.planDuration = plan.durationDays || 30;
 
-                    // Figure out which day the user is on
-                    const createdAt = new Date(plan.createdAt);
-                    const now = new Date();
-                    const diffMs = now - createdAt;
-                    const daysPassed = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-                    context.currentDay = Math.min(daysPassed, plan.durationDays);
+                    // Use the latest submitted log's dayNumber as currentDay
+                    // This is accurate regardless of when the plan was created
+                    const latestLog = await DailyLog.findOne({
+                        userId,
+                        planId: plan._id,
+                        submitted: true,
+                    })
+                        .sort({ dayNumber: -1 })
+                        .select("dayNumber");
+                    console.log("[DEBUG] latestLog:", latestLog); // ADD THIS LINE
 
-                    // Today's topic
+                    if (latestLog) {
+                        context.currentDay = latestLog.dayNumber;
+                    } else {
+                        // No submitted logs yet — check for a draft (today's log)
+                        const draftLog = await DailyLog.findOne({
+                            userId,
+                            planId: plan._id,
+                            submitted: false,
+                        })
+                            .sort({ dayNumber: -1 })
+                            .select("dayNumber");
+
+                        context.currentDay = draftLog ? draftLog.dayNumber : 1;
+                    }
+
+                    // Get today's topic from the plan using currentDay
                     const todayPlan = plan.days.find((d) => d.day === context.currentDay);
                     if (todayPlan) context.todayTopic = todayPlan.topic;
                 }
@@ -51,12 +69,13 @@ export const chat = async (req, res) => {
                 submitted: true,
                 "evaluation.score": { $exists: true },
             })
-                .sort({ date: -1 })
+                .sort({ dayNumber: -1 })
                 .limit(3)
-                .select("date evaluation.score");
+                .select("date dayNumber evaluation.score");
 
             context.recentScores = recentLogs.map((l) => ({
                 date: l.date,
+                dayNumber: l.dayNumber,
                 score: l.evaluation?.score,
             }));
         } catch (logsError) {
@@ -66,6 +85,7 @@ export const chat = async (req, res) => {
         console.log("[MentorController] Chat request with context:", {
             domain: context.domain,
             currentDay: context.currentDay,
+            todayTopic: context.todayTopic,
             messageCount: messages.length,
         });
 

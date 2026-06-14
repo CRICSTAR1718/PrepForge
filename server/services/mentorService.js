@@ -55,7 +55,7 @@ export async function getMentorReply(messages, context) {
         throw new Error("GEMINI_API_KEY is not configured");
     }
 
-    // Use gemini-1.5-flash — same model as the evaluator
+    // Use gemini-2.5-flash — same model as the evaluator
     const model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash",
         systemInstruction: buildSystemPrompt(context),
