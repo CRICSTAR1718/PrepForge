@@ -7,6 +7,7 @@ import connectDB from "./config/database.js";
 import authRoutes from "./routes/auth.js";
 import planRoutes from "./routes/plans.js";
 import logRoutes from "./routes/logs.js";
+import mentorRouter from "./routes/mentor.js";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/plans", planRoutes);
 app.use("/api/logs", logRoutes);
+app.use("/api/mentor", mentorRouter);
 
 const PORT = process.env.PORT ?? 5000;
 

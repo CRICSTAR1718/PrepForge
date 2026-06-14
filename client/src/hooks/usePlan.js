@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { usePlanContext } from "../context/PlanContext";
 import { createPlan, getMyPlan } from "../services/planService";
 
@@ -5,7 +6,7 @@ const usePlan = () => {
     const { plan, setPlan, loading, setLoading, error, setError } = usePlanContext();
 
     // Called from the Onboarding page after form submit
-    const generatePlan = async (domain, durationDays) => {
+    const generatePlan = useCallback(async (domain, durationDays) => {
         setLoading(true);
         setError(null);
         try {
@@ -19,10 +20,10 @@ const usePlan = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [setError, setLoading, setPlan]);
 
     // Called from the Plan page on load to restore existing plan
-    const fetchMyPlan = async () => {
+    const fetchMyPlan = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -36,7 +37,7 @@ const usePlan = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [setError, setLoading, setPlan]);
 
     return { plan, loading, error, generatePlan, fetchMyPlan };
 };

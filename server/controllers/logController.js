@@ -1,48 +1,103 @@
-// server/controllers/logController.js
-
 import DailyLog from "../models/DailyLog.js";
 import Plan from "../models/Plan.js";
 import User from "../models/User.js";
 import { evaluateLog } from "../services/evaluator.js";
 
-// Helper: get today's date as "YYYY-MM-DD"
-const getTodayString = () => new Date().toISOString().split("T")[0];
-
-// Helper: normalize plan tasks to plain strings
 const normalizeTasks = (tasks = []) =>
-    tasks.map((t) =>
-        typeof t === "string" ? t : t.title || t.description || JSON.stringify(t)
+    tasks.map((task) =>
+        typeof task === "string" ? task : task.title || task.description || JSON.stringify(task)
     );
 
-// ─────────────────────────────────────────────
-// GET /api/logs/today
-// Returns today's log if it exists, or creates a fresh one
-// ─────────────────────────────────────────────
+const getPlanDay = (plan, dayNumber) =>
+    plan?.days?.find((day) => day.day === dayNumber) || plan?.days?.[dayNumber - 1] || null;
+
+const getPlanDayTasks = (planDay) => normalizeTasks(planDay?.tasks || []);
+
+const getLogDateForPlanDay = (plan, dayNumber) => {
+    const date = new Date(plan.createdAt);
+    date.setDate(date.getDate() + dayNumber - 1);
+    return date;
+};
+
+const attachNormalizedTasks = (planDay) => {
+    if (!planDay) return null;
+    const plainDay = planDay.toObject ? planDay.toObject() : { ...planDay };
+    plainDay.tasks = getPlanDayTasks(planDay);
+    return plainDay;
+};
+
+const findNextDayNumber = async (userId, plan) => {
+    const submittedLogs = await DailyLog.find({
+        userId,
+        planId: plan._id,
+        submitted: true,
+        dayNumber: { $ne: null },
+    }).select("dayNumber");
+
+    const completedDays = new Set(submittedLogs.map((log) => log.dayNumber));
+    const nextDay = plan.days.find((day) => !completedDays.has(day.day));
+    return nextDay?.day ?? null;
+};
+
+const syncDraftTasks = async (log, planDay) => {
+    if (!log || log.submitted) return log;
+
+    const plannedTasks = getPlanDayTasks(planDay);
+    const sameTasks =
+        plannedTasks.length === log.plannedTasks.length &&
+        plannedTasks.every((task, index) => task === log.plannedTasks[index]);
+
+    if (!sameTasks) {
+        log.plannedTasks = plannedTasks;
+        await log.save();
+    }
+
+    return log;
+};
+
+const appendSuggestionsToNextPlanDay = async (plan, currentDayNumber, suggestions = []) => {
+    const nextPlanDay = getPlanDay(plan, currentDayNumber + 1);
+    if (!nextPlanDay || suggestions.length === 0) return;
+
+    const existingTitles = new Set(
+        getPlanDayTasks(nextPlanDay).map((task) => task.trim().toLowerCase())
+    );
+
+    const suggestionTasks = suggestions
+        .map((suggestion) => suggestion?.trim())
+        .filter(Boolean)
+        .filter((suggestion) => {
+            const key = suggestion.toLowerCase();
+            if (existingTitles.has(key)) return false;
+            existingTitles.add(key);
+            return true;
+        })
+        .map((suggestion) => ({
+            title: suggestion,
+            description: "Suggested by AI based on your previous result.",
+        }));
+
+    if (suggestionTasks.length === 0) return;
+
+    nextPlanDay.tasks.push(...suggestionTasks);
+    await plan.save();
+
+    // If there are any existing draft logs for the next day, update them
+    // so the suggested tasks appear without replacing other tasks.
+    await DailyLog.updateMany(
+        {
+            userId: plan.userId,
+            planId: plan._id,
+            dayNumber: nextPlanDay.day,
+            submitted: false,
+        },
+        { $set: { plannedTasks: getPlanDayTasks(nextPlanDay) } }
+    );
+};
+
 export const getOrCreateTodayLog = async (req, res) => {
     try {
         const userId = req.user.id;
-        const today = getTodayString();
-
-        // Check if a log already exists for today
-        let log = await DailyLog.findOne({ userId, date: today });
-
-        if (log) {
-            const plan = await Plan.findById(log.planId);
-            const planStartDate = new Date(plan.createdAt).toISOString().split("T")[0];
-            const msPerDay = 1000 * 60 * 60 * 24;
-            const dayIndex = Math.floor(
-                (new Date(today) - new Date(planStartDate)) / msPerDay
-            );
-            const todayPlanDay = plan.days[dayIndex] || null;
-
-            if (todayPlanDay?.tasks) {
-                todayPlanDay.tasks = normalizeTasks(todayPlanDay.tasks);
-            }
-
-            return res.status(200).json({ success: true, data: log, planDay: todayPlanDay });
-        }
-
-        // No log yet — fetch the user's active plan
         const plan = await Plan.findOne({ userId }).sort({ createdAt: -1 });
 
         if (!plan) {
@@ -52,28 +107,42 @@ export const getOrCreateTodayLog = async (req, res) => {
             });
         }
 
-        // Figure out which day of the plan today is
-        const planStartDate = new Date(plan.createdAt).toISOString().split("T")[0];
-        const msPerDay = 1000 * 60 * 60 * 24;
-        const dayIndex = Math.floor(
-            (new Date(today) - new Date(planStartDate)) / msPerDay
-        );
+        // Prefer the most recent unsubmitted draft (latest dayNumber/createdAt)
+        // so users progress to the next day even if an older draft lingers.
+        let log = await DailyLog.findOne({
+            userId,
+            planId: plan._id,
+            submitted: false,
+        }).sort({ dayNumber: -1, createdAt: -1 });
 
-        // Get today's plan tasks
-        const todayPlanDay = plan.days[dayIndex] || null;
-        if (todayPlanDay?.tasks) {
-            todayPlanDay.tasks = normalizeTasks(todayPlanDay.tasks);
+        if (log) {
+            const planDay = getPlanDay(plan, log.dayNumber);
+            await syncDraftTasks(log, planDay);
+
+            return res.status(200).json({
+                success: true,
+                data: log,
+                planDay: attachNormalizedTasks(planDay),
+            });
         }
 
-        const plannedTasks = todayPlanDay?.tasks || [];
+        const nextDayNumber = await findNextDayNumber(userId, plan);
+        if (!nextDayNumber) {
+            return res.status(200).json({
+                success: true,
+                data: null,
+                planDay: null,
+                message: "All plan days are complete.",
+            });
+        }
 
-        // Create a fresh draft log
+        const planDay = getPlanDay(plan, nextDayNumber);
         log = await DailyLog.create({
             userId,
             planId: plan._id,
-            date: today,
-            dayNumber: dayIndex + 1,
-            plannedTasks,
+            date: getLogDateForPlanDay(plan, nextDayNumber),
+            dayNumber: nextDayNumber,
+            plannedTasks: getPlanDayTasks(planDay),
             tasksCompleted: [],
             timeSpentMinutes: 0,
             notes: "",
@@ -85,7 +154,7 @@ export const getOrCreateTodayLog = async (req, res) => {
         return res.status(201).json({
             success: true,
             data: log,
-            planDay: todayPlanDay,
+            planDay: attachNormalizedTasks(planDay),
         });
     } catch (error) {
         console.error("getOrCreateTodayLog error:", error);
@@ -93,10 +162,6 @@ export const getOrCreateTodayLog = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
-// PUT /api/logs/:id
-// Save draft — no evaluation triggered
-// ─────────────────────────────────────────────
 export const saveDraftLog = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -130,11 +195,6 @@ export const saveDraftLog = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
-// POST /api/logs/:id/submit
-// Submits the log, then calls Gemini in the background
-// Client gets an instant response — polls GET /logs/:id for result
-// ─────────────────────────────────────────────
 export const submitLog = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -148,35 +208,18 @@ export const submitLog = async (req, res) => {
             return res.status(400).json({ success: false, message: "Already submitted." });
         }
 
-        // Mark submitted immediately so frontend knows it's locked
         log.submitted = true;
         log.evaluationPending = true;
         await log.save();
 
-        // Respond to the client right away — don't make them wait for Gemini
         res.status(200).json({ success: true, data: log });
 
-        // ── Run Gemini evaluation in background ──────────────────────────────
         try {
             const user = await User.findById(userId);
             const domain = user?.domain || "DSA";
-
-            // Get this day's planned tasks from the plan for evaluation context
-            let plannedTasks = [];
-            if (log.planId) {
-                const plan = await Plan.findById(log.planId);
-                if (plan) {
-                    const planStartDate = new Date(plan.createdAt).toISOString().split("T")[0];
-                    const msPerDay = 1000 * 60 * 60 * 24;
-                    const dayIndex = Math.floor(
-                        (new Date(log.date) - new Date(planStartDate)) / msPerDay
-                    );
-                    const todayPlan = plan.days[dayIndex];
-                    if (todayPlan?.tasks) {
-                        plannedTasks = normalizeTasks(todayPlan.tasks);
-                    }
-                }
-            }
+            const plan = log.planId ? await Plan.findById(log.planId) : null;
+            const planDay = plan ? getPlanDay(plan, log.dayNumber) : null;
+            const plannedTasks = getPlanDayTasks(planDay);
 
             const evaluation = await evaluateLog({
                 domain,
@@ -195,10 +238,13 @@ export const submitLog = async (req, res) => {
             log.evaluationPending = false;
             await log.save();
 
-            console.log(`✅ Evaluation done for log ${id} — Score: ${evaluation.score}`);
+            if (plan) {
+                await appendSuggestionsToNextPlanDay(plan, log.dayNumber, evaluation.suggestions);
+            }
+
+            console.log(`Evaluation done for log ${id} - Score: ${evaluation.score}`);
         } catch (evalError) {
-            // Gemini failed — save error state so frontend doesn't poll forever
-            console.error(`❌ Evaluation failed for log ${id}:`, evalError.message);
+            console.error(`Evaluation failed for log ${id}:`, evalError.message);
             log.evaluation = {
                 score: null,
                 feedback: "Evaluation failed. Please try again later.",
@@ -213,10 +259,6 @@ export const submitLog = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
-// GET /api/logs/:id
-// Fetch a single log by ID — used by frontend to poll for evaluation result
-// ─────────────────────────────────────────────
 export const getLogById = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -234,14 +276,10 @@ export const getLogById = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
-// GET /api/logs
-// Fetch all logs for the current user — used by dashboard
-// ─────────────────────────────────────────────
 export const getAllLogs = async (req, res) => {
     try {
         const userId = req.user.id;
-        const logs = await DailyLog.find({ userId }).sort({ date: -1 });
+        const logs = await DailyLog.find({ userId }).sort({ dayNumber: -1, date: -1 });
         return res.status(200).json({ success: true, data: logs });
     } catch (error) {
         console.error("getAllLogs error:", error);

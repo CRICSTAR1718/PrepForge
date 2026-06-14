@@ -81,7 +81,7 @@ const Tracker = () => {
                             </p>
                         </div>
                         <button
-                            onClick={() => navigate("/result", { state: { logId: log._id } })}
+                            onClick={() => navigate(`/result/${log._id}`)}
                             className="text-sm font-semibold text-indigo-500 hover:text-indigo-400 transition-colors whitespace-nowrap"
                         >
                             View Result →

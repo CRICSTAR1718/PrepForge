@@ -74,8 +74,11 @@ const dailyLogSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Compound index: one log per user per day
-dailyLogSchema.index({ userId: 1, date: 1 }, { unique: true });
+// One log per plan day. A user can complete multiple plan days on the same date.
+dailyLogSchema.index(
+    { userId: 1, planId: 1, dayNumber: 1 },
+    { unique: true, partialFilterExpression: { planId: { $exists: true, $ne: null } } }
+);
 
 const DailyLog = mongoose.model('DailyLog', dailyLogSchema);
 export default DailyLog;

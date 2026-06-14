@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Spinner from "../components/ui/Spinner.jsx";
 import { getLogById } from "../services/logService.js";
 import { scoreBgColor, scoreLabel, scoreTextColor } from "../utils/scoreColor.js";
@@ -74,7 +74,8 @@ function StatCard({ label, value }) {
 export default function Result() {
     const navigate = useNavigate();
     const location = useLocation();
-    const logId = location.state?.logId;
+    const { logId: routeLogId } = useParams();
+    const logId = routeLogId ?? location.state?.logId;
     const intervalRef = useRef(null);
 
     const [log, setLog] = useState(null);

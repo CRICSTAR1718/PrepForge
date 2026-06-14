@@ -71,7 +71,7 @@ const Plan = () => {
                 navigate("/onboarding");
             });
         }
-    }, []);
+    }, [fetchMyPlan, navigate, plan]);
 
     if (loading) {
         return (
