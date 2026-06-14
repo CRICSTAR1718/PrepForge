@@ -109,11 +109,29 @@ export const getOrCreateTodayLog = async (req, res) => {
 
         // Prefer the most recent unsubmitted draft (latest dayNumber/createdAt)
         // so users progress to the next day even if an older draft lingers.
+        // If there's a log already for today's date (submitted or not),
+        // return it. This prevents the tracker from advancing to the next
+        // plan day until the calendar day has rolled over.
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const startOfTomorrow = new Date(startOfToday);
+        startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+
         let log = await DailyLog.findOne({
             userId,
             planId: plan._id,
-            submitted: false,
-        }).sort({ dayNumber: -1, createdAt: -1 });
+            date: { $gte: startOfToday, $lt: startOfTomorrow },
+        });
+
+        if (!log) {
+            // Prefer the most recent unsubmitted draft (latest dayNumber/createdAt)
+            // so users progress to the next day even if an older draft lingers.
+            log = await DailyLog.findOne({
+                userId,
+                planId: plan._id,
+                submitted: false,
+            }).sort({ dayNumber: -1, createdAt: -1 });
+        }
 
         if (log) {
             const planDay = getPlanDay(plan, log.dayNumber);

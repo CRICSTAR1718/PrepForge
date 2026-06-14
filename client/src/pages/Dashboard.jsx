@@ -3,11 +3,12 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useDashboard } from "../hooks/useDashboard.js";
 import usePlan from "../hooks/usePlan.js";
 import ScoreTrendChart from "../components/charts/ScoreTrendChart.jsx";
+import DayStatusCalendar from "../components/charts/DayStatusCalendar.jsx";
 import { scoreTextColor } from "../utils/scoreColor.js";
 
 export default function Dashboard() {
     const { user } = useAuth();
-    const { loading, error, streak, averageScore, chartData, recentFeedback, totalSubmitted } =
+    const { loading, error, streak, averageScore, chartData, recentFeedback, totalSubmitted, logs } =
         useDashboard();
     const { plan } = usePlan();
 
@@ -29,6 +30,29 @@ export default function Dashboard() {
     const progressPct = totalDays
         ? Math.round((totalSubmitted / totalDays) * 100)
         : 0;
+
+    // Compute per-day status: 'completed' | 'missed' | 'pending' with scores
+    let dayStatuses = [];
+    if (plan && logs) {
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+
+        dayStatuses = plan.days.map((d) => {
+            const expectedDate = new Date(plan.createdAt);
+            expectedDate.setDate(expectedDate.getDate() + d.day - 1);
+
+            const logForDay = logs.find((l) => l.dayNumber === d.day);
+            const completed = logForDay && logForDay.submitted;
+            const missed = !completed && expectedDate < startOfToday;
+
+            return {
+                day: d.day,
+                status: completed ? "completed" : missed ? "missed" : "pending",
+                topic: d.topic,
+                score: logForDay?.evaluation?.score ?? null,
+            };
+        });
+    }
 
     if (loading) {
         return (
@@ -136,6 +160,14 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+                {/* Progress calendar with day statuses */}
+                {dayStatuses.length > 0 && (
+                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm p-6">
+                        <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Progress Calendar</h2>
+                        <DayStatusCalendar dayStatuses={dayStatuses} maxVisible={30} />
+                    </div>
+                )}
+
                 {/* Score trend chart */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm p-6">
                     <h2 className="font-semibold text-gray-900 dark:text-white mb-4">
@@ -183,8 +215,8 @@ function StatCard({ label, value, suffix, icon, highlight }) {
     return (
         <div
             className={`bg-white dark:bg-gray-900 border rounded-2xl shadow-sm px-4 py-5 flex flex-col gap-1 ${highlight
-                    ? "border-indigo-200 dark:border-indigo-800"
-                    : "border-gray-200 dark:border-gray-800"
+                ? "border-indigo-200 dark:border-indigo-800"
+                : "border-gray-200 dark:border-gray-800"
                 }`}
         >
             <span className="text-xl">{icon}</span>

@@ -80,5 +80,6 @@ export function useDashboard() {
         chartData,
         recentFeedback,
         totalSubmitted: submittedLogs.length,
+        logs,
     };
 }
