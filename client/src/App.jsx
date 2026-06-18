@@ -19,10 +19,12 @@ const ProtectedWithNav = ({ children }) => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" />;
   return (
-    <>
+    <div className="flex flex-col h-screen">
       <Navbar />
-      {children}
-    </>
+      <main className="flex-1 overflow-y-auto bg-cream-50 dark:bg-gray-950 smooth-transition">
+        {children}
+      </main>
+    </div>
   );
 };
 

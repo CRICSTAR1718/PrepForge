@@ -1,3 +1,138 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Modern SaaS base styles */
+@layer base {
+  html, body, #root {
+    @apply h-full w-full m-0 p-0;
+  }
+
+  body {
+    @apply bg-cream-50 text-gray-900 transition-colors duration-300 font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  body.dark {
+    @apply bg-gray-950 text-gray-50;
+  }
+
+  /* Enhanced typography */
+  h1 {
+    @apply font-extrabold tracking-tight text-5xl md:text-6xl;
+  }
+
+  h2 {
+    @apply font-bold tracking-tight text-3xl md:text-4xl;
+  }
+
+  h3 {
+    @apply font-bold tracking-tight text-2xl md:text-3xl;
+  }
+
+  h4 {
+    @apply font-semibold tracking-tight text-xl md:text-2xl;
+  }
+
+  h5 {
+    @apply font-semibold tracking-tight text-lg md:text-xl;
+  }
+
+  h6 {
+    @apply font-semibold tracking-normal text-base md:text-lg;
+  }
+
+  p {
+    @apply font-normal tracking-normal leading-relaxed text-base;
+  }
+
+  small {
+    @apply text-sm font-normal;
+  }
+
+  a {
+    @apply text-amber-700 dark:text-amber-400 hover:underline smooth-transition;
+  }
+
+  button, [role="button"] {
+    @apply font-medium tracking-wide;
+  }
+
+  code {
+    @apply font-mono text-sm bg-brown-100 dark:bg-gray-800 px-2 py-1 rounded;
+  }
+}
+
+/* Utility animations */
+@layer components {
+  .fade-in {
+    @apply animate-fadeIn;
+  }
+
+  .slide-in-up {
+    @apply animate-slideInUp;
+  }
+
+  .slide-in-right {
+    @apply animate-slideInRight;
+  }
+
+  /* Smooth transitions */
+  .smooth-transition {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Glassmorphism effect */
+  .glass {
+    @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-white/20 dark:border-gray-800/30;
+  }
+
+  /* Elevated card styling */
+  .card {
+    @apply bg-white dark:bg-gray-900 border border-brown-100 dark:border-gray-800 rounded-2xl shadow-sm hover:shadow-md smooth-transition;
+  }
+
+  .card:hover {
+    @apply shadow-lg;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-amber-700 to-amber-600 dark:from-amber-400 dark:to-amber-300 bg-clip-text text-transparent font-bold;
+  }
+
+  /* Smooth button transitions */
+  .btn {
+    @apply smooth-transition active:scale-95 font-semibold;
+  }
+
+  /* Input focus styling */
+  .input-focus {
+    @apply focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 smooth-transition;
+  }
+
+  /* Section title styling */
+  .section-title {
+    @apply text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight;
+  }
+
+  /* Label styling */
+  .label {
+    @apply block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 tracking-wide;
+  }
+
+  /* Badge styling */
+  .badge {
+    @apply inline-block px-3 py-1 text-xs font-semibold rounded-full smooth-transition;
+  }
+
+  /* Text emphasis */
+  .text-emphasis {
+    @apply font-bold text-amber-700 dark:text-amber-400;
+  }
+
+  /* Subtle text */
+  .text-subtle {
+    @apply text-gray-500 dark:text-gray-400 text-sm font-normal;
+  }
+}
