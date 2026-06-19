@@ -18,7 +18,7 @@ const DifficultyPicker = ({ value, onChange, disabled }) => (
                 className={`w-9 h-9 rounded-lg text-sm font-semibold border transition-all
                     ${value === n
                         ? "bg-indigo-600 border-indigo-600 text-white"
-                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600"
+                        : "tracker-input text-slate-300 hover:border-violet-400 hover:text-violet-200"
                     }
                     ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
             >
@@ -86,7 +86,7 @@ const TrackerForm = ({
                             return (
                                 <li
                                     key={i}
-                                    className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden"
+                                    className="tracker-task rounded-xl overflow-hidden"
                                 >
                                     <label className={`flex items-start gap-3 px-4 py-3
                                         ${submitDone ? "cursor-not-allowed" : "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"}
@@ -138,7 +138,7 @@ const TrackerForm = ({
                         disabled={submitDone}
                         onChange={(e) => handleTimeChange(e.target.value)}
                         className="w-28 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
-                                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm
+                                   tracker-input text-sm
                                    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
                                    disabled:opacity-50 disabled:cursor-not-allowed"
                     />
@@ -165,7 +165,7 @@ const TrackerForm = ({
                     onChange={(e) => handleNotesChange(e.target.value)}
                     placeholder="Write your notes here..."
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700
-                               bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm
+                               tracker-input text-sm
                                placeholder-gray-300 dark:placeholder-gray-600 resize-none
                                focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
                                disabled:opacity-50 disabled:cursor-not-allowed"
@@ -234,3 +234,6 @@ const TrackerForm = ({
 };
 
 export default TrackerForm;
+
+
+

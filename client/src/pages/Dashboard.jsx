@@ -68,10 +68,10 @@ export default function Dashboard() {
                 
                 {/* Header Section */}
                 <div className="mb-8 md:mb-12 slide-in-up">
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-3 tracking-tight">
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white mb-3 tracking-tight">
                         Welcome back{user?.email ? `, ${user.email.split("@")[0]}` : ""}! 👋
                     </h1>
-                    <p className="text-lg text-brown-600 dark:text-gray-400 font-medium tracking-wide">
+                    <p className="text-base text-brown-600 dark:text-gray-400 font-medium tracking-wide">
                         {user?.domain} preparation · <span className="font-bold text-amber-700 dark:text-amber-400">{totalDays}-day plan</span>
                     </p>
                 </div>
@@ -97,10 +97,10 @@ export default function Dashboard() {
                 {/* Today's Section */}
                 <div className="grid lg:grid-cols-3 gap-6 md:gap-8 mb-8">
                     {/* Main Action Card */}
-                    <div className="lg:col-span-2 card p-6 md:p-8 animate-slideInUp">
+                    <div className="lg:col-span-2 card p-5 md:p-6 animate-slideInUp">
                         <div className="flex items-center justify-between mb-6">
                             <div>
-                                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+                                <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
                                     Today's Challenge
                                 </h2>
                                 <p className="text-sm text-brown-600 dark:text-gray-500 mt-2 font-medium">Day {currentDay ?? "?"} of {totalDays ?? "?"}</p>
@@ -142,8 +142,8 @@ export default function Dashboard() {
                     </div>
 
                     {/* Quick Stats Card */}
-                    <div className="card p-6 md:p-8 animate-slideInUp" style={{animationDelay: "0.1s"}}>
-                        <h3 className="font-bold text-gray-900 dark:text-white mb-6 text-lg tracking-tight">Quick Stats</h3>
+                    <div className="card p-5 md:p-6 animate-slideInUp" style={{animationDelay: "0.1s"}}>
+                        <h3 className="font-bold text-gray-900 dark:text-white mb-5 text-base tracking-tight">Quick Stats</h3>
                         <div className="space-y-4">
                             <div className="flex justify-between items-center p-3 bg-brown-50 dark:bg-gray-800/50 rounded-xl">
                                 <span className="text-sm text-brown-700 dark:text-gray-400 font-medium">Completion</span>
@@ -160,7 +160,7 @@ export default function Dashboard() {
                         </div>
                         <Link
                             to="/mentor"
-                            className="btn w-full mt-6 bg-brown-600 hover:bg-brown-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white font-bold py-3 rounded-xl smooth-transition tracking-wide"
+                            className="btn mt-6 flex w-full min-h-12 items-center justify-center border border-violet-500/45 bg-violet-600/20 px-4 py-3 text-center font-bold text-violet-100 hover:bg-violet-600 hover:text-white"
                         >
                             Ask PrepMentor
                         </Link>
@@ -171,14 +171,14 @@ export default function Dashboard() {
                 <div className="grid lg:grid-cols-2 gap-6 md:gap-8 mb-8">
                     {/* Progress Calendar */}
                     {dayStatuses.length > 0 && (
-                        <div className="card p-6 md:p-8 animate-slideInUp" style={{animationDelay: "0.15s"}}>
+                        <div className="card p-5 md:p-6 animate-slideInUp" style={{animationDelay: "0.15s"}}>
                             <h2 className="section-title">Progress Calendar</h2>
                             <DayStatusCalendar dayStatuses={dayStatuses} maxVisible={30} />
                         </div>
                     )}
 
                     {/* Score Trend */}
-                    <div className="card p-6 md:p-8 animate-slideInUp" style={{animationDelay: "0.2s"}}>
+                    <div className="card p-5 md:p-6 animate-slideInUp" style={{animationDelay: "0.2s"}}>
                         <h2 className="section-title">
                             Score Trend — Last 14 Days
                         </h2>
@@ -188,7 +188,7 @@ export default function Dashboard() {
 
                 {/* Recent Feedback */}
                 {recentFeedback.length > 0 && (
-                    <div className="card p-6 md:p-8 animate-slideInUp" style={{animationDelay: "0.25s"}}>
+                    <div className="card p-5 md:p-6 animate-slideInUp" style={{animationDelay: "0.25s"}}>
                         <h2 className="section-title">
                             Recent Evaluator Feedback
                         </h2>
@@ -224,16 +224,16 @@ export default function Dashboard() {
 function StatCard({ label, value, suffix, icon, highlight, delay }) {
     return (
         <div
-            className={`card px-5 py-6 md:px-6 md:py-8 flex flex-col gap-2 animate-slideInUp hover:scale-105 ${
+            className={`card px-4 py-5 md:px-5 md:py-6 flex flex-col gap-2 animate-slideInUp hover:scale-105 ${
                 highlight
                     ? "border-amber-200 dark:border-amber-800/50 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20"
                     : "bg-white dark:bg-gray-900"
             }`}
             style={{ animationDelay: `${delay * 0.1}s` }}
         >
-            <span className="text-3xl md:text-4xl">{icon}</span>
+            <span className="text-2xl md:text-3xl">{icon}</span>
             <div className="flex items-baseline gap-1.5 mt-1">
-                <span className="text-3xl md:text-4xl font-extrabold gradient-text">
+                <span className="text-2xl md:text-3xl font-extrabold gradient-text">
                     {value}
                 </span>
                 {suffix && (
@@ -244,3 +244,5 @@ function StatCard({ label, value, suffix, icon, highlight, delay }) {
         </div>
     );
 }
+
+

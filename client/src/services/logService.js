@@ -29,8 +29,14 @@ export async function getLogById(logId) {
     return res.data.data;
 }
 
+export async function getLatestEvaluation() {
+    const res = await api.get("/logs/latest-evaluation");
+    return res.data.data;
+}
+
 // Get all submitted logs for dashboard
 export async function getAllLogs() {
     const res = await api.get('/logs');
     return res.data.data;
 }
+

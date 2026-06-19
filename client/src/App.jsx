@@ -19,9 +19,9 @@ const ProtectedWithNav = ({ children }) => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" />;
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex h-screen overflow-hidden bg-cream-50 text-slate-100">
       <Navbar />
-      <main className="flex-1 overflow-y-auto bg-cream-50 dark:bg-gray-950 smooth-transition">
+      <main className="min-w-0 flex-1 overflow-y-auto overscroll-contain smooth-transition">
         {children}
       </main>
     </div>
@@ -31,22 +31,18 @@ const ProtectedWithNav = ({ children }) => {
 export default function App() {
   return (
     <Routes>
-      {/* Public */}
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Login />} />
-
-      {/* Protected — no navbar (onboarding is a focused flow) */}
       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-
-      {/* Protected — with navbar */}
       <Route path="/dashboard" element={<ProtectedWithNav><Dashboard /></ProtectedWithNav>} />
       <Route path="/plan" element={<ProtectedWithNav><Plan /></ProtectedWithNav>} />
       <Route path="/tracker" element={<ProtectedWithNav><Tracker /></ProtectedWithNav>} />
+      <Route path="/result" element={<ProtectedWithNav><Result /></ProtectedWithNav>} />
       <Route path="/result/:logId" element={<ProtectedWithNav><Result /></ProtectedWithNav>} />
       <Route path="/mentor" element={<ProtectedWithNav><Mentor /></ProtectedWithNav>} />
-
-      {/* Fallback */}
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
   );
 }
+
+

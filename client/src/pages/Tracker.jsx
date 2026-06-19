@@ -44,7 +44,7 @@ const Tracker = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 px-4 py-10">
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-3xl mx-auto">
 
                 {/* Header */}
                 <div className="mb-8">
@@ -90,7 +90,7 @@ const Tracker = () => {
                 )}
 
                 {/* Form card */}
-                <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-8">
+                <div className="tracker-form rounded-2xl p-6 md:p-8">
                     <TrackerForm {...tracker} />
                 </div>
 
@@ -100,3 +100,4 @@ const Tracker = () => {
 };
 
 export default Tracker;
+

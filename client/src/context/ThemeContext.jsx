@@ -1,26 +1,21 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
 
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState("light");
-  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
 
   useEffect(() => {
-    setMounted(true);
-    const savedTheme = localStorage.getItem("theme") || "light";
-    setTheme(savedTheme);
-    document.documentElement.className = savedTheme === "dark" ? "dark" : "";
-  }, []);
+    const className = theme === "dark" ? "dark" : "";
+    document.documentElement.className = className;
+    document.body.className = className;
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
   const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    document.documentElement.className = newTheme === "dark" ? "dark" : "";
+    setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"));
   };
-
-  if (!mounted) return children;
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

@@ -1,131 +1,76 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Bot, CalendarCheck, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, Home, LogOut, Menu, Settings, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import ThemeToggle from "../ThemeToggle.jsx";
 
 const NAV_LINKS = [
-    { to: "/dashboard", label: "Dashboard", icon: "📊" },
-    { to: "/tracker", label: "Today's Tracker", icon: "✅" },
-    { to: "/plan", label: "My Plan", icon: "📅" },
-    { to: "/mentor", label: "Mentor Chat", icon: "💬" },
+    { to: "/dashboard", label: "Command Center", icon: Home },
+    { to: "/tracker", label: "Daily Execution", icon: CalendarCheck },
+    { to: "/plan", label: "Plan Generator", icon: ClipboardList },
+    { to: "/mentor", label: "AI Mentor", icon: Bot },
+    { to: "/result", label: "Evaluator", icon: ClipboardCheck },
 ];
 
 export default function Navbar() {
     const { user, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const username = user?.email?.split("@")[0] || "Profile";
 
     const handleLogout = () => {
         logout();
         navigate("/login");
     };
 
-    return (
-        <nav className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-brown-100 dark:border-gray-800 shadow-sm smooth-transition">
-            <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-                {/* Logo */}
-                <Link
-                    to="/dashboard"
-                    className="flex items-center gap-2 group animate-fadeIn"
-                >
-                    <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-amber-700 rounded-xl flex items-center justify-center shadow-md">
-                        <span className="text-white font-bold text-lg">P</span>
-                    </div>
-                    <div>
-                        <p className="text-sm font-bold gradient-text">Prep<span className="text-gray-900 dark:text-white">Forge</span></p>
-                    </div>
+    const sidebarContent = (isMobile = false) => (
+        <>
+            <div className={`flex items-center ${collapsed && !isMobile ? "justify-center" : "gap-3"}`}>
+                <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 overflow-hidden">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-lg font-black text-white shadow-[0_0_24px_rgba(124,58,237,0.35)]">P</div>
+                    {(!collapsed || isMobile) && <div className="whitespace-nowrap"><p className="font-black text-white">Prep<span className="gradient-text">Forge</span></p><p className="text-[11px] text-slate-500">Forge. Practice. Perform.</p></div>}
                 </Link>
+                {!isMobile && <button onClick={() => setCollapsed((value) => !value)} className="ml-auto rounded-lg p-2 text-slate-400 hover:bg-white/[0.06] hover:text-white" aria-label="Toggle sidebar">{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button>}
+                {isMobile && <button onClick={() => setMobileOpen(false)} className="ml-auto rounded-lg p-2 text-slate-400 hover:bg-white/[0.06] hover:text-white" aria-label="Close sidebar"><X className="h-5 w-5" /></button>}
+            </div>
 
-                {/* Desktop nav */}
-                <div className="hidden md:flex items-center gap-1">
-                    {NAV_LINKS.map(({ to, label, icon }) => {
+            <div className="mt-6">
+                {(!collapsed || isMobile) && <p className="mb-3 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Prep Modules</p>}
+                <div className="space-y-1.5">
+                    {NAV_LINKS.map(({ to, label, icon: Icon }) => {
                         const active = location.pathname === to;
-                        return (
-                            <Link
-                                key={to}
-                                to={to}
-                                className={`px-3 py-2 rounded-lg text-sm font-medium smooth-transition flex items-center gap-1.5 ${
-                                    active
-                                        ? "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 shadow-sm"
-                                        : "text-gray-600 dark:text-gray-400 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-brown-50 dark:hover:bg-gray-800/50"
-                                }`}
-                            >
-                                <span>{icon}</span>
-                                {label}
-                            </Link>
-                        );
+                        return <Link key={to} to={to} onClick={() => setMobileOpen(false)} title={collapsed && !isMobile ? label : undefined} className={`group flex items-center rounded-xl py-2.5 transition-all ${collapsed && !isMobile ? "justify-center px-2" : "gap-3 px-3"} ${active ? "bg-gradient-to-r from-violet-700 to-indigo-700 text-white shadow-[0_10px_28px_rgba(109,40,217,0.25)]" : "text-slate-400 hover:bg-white/[0.06] hover:text-white"}`}><Icon className="h-5 w-5 shrink-0" />{(!collapsed || isMobile) && <span className="text-sm font-semibold">{label}</span>}</Link>;
                     })}
-                </div>
-
-                {/* Desktop right */}
-                <div className="hidden md:flex items-center gap-4">
-                    <ThemeToggle />
-                    {user && (
-                        <span className="text-xs text-brown-600 dark:text-gray-500 font-medium">
-                            {user.email?.split("@")[0]}
-                        </span>
-                    )}
-                    <button
-                        onClick={handleLogout}
-                        className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 smooth-transition font-medium"
-                    >
-                        Log out
-                    </button>
-                </div>
-
-                {/* Mobile right (theme toggle + hamburger) */}
-                <div className="md:hidden flex items-center gap-3">
-                    <ThemeToggle />
-                    <button
-                        className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-brown-100 dark:hover:bg-gray-800 smooth-transition"
-                        onClick={() => setMobileOpen((o) => !o)}
-                        aria-label="Toggle menu"
-                    >
-                        {mobileOpen ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                        )}
-                    </button>
                 </div>
             </div>
 
-            {/* Mobile menu */}
-            {mobileOpen && (
-                <div className="md:hidden bg-white dark:bg-gray-900 border-t border-brown-100 dark:border-gray-800 px-4 py-3 space-y-1 animate-slideInUp">
-                    {NAV_LINKS.map(({ to, label, icon }) => {
-                        const active = location.pathname === to;
-                        return (
-                            <Link
-                                key={to}
-                                to={to}
-                                onClick={() => setMobileOpen(false)}
-                                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium smooth-transition ${
-                                    active
-                                        ? "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400"
-                                        : "text-gray-700 dark:text-gray-300 hover:bg-brown-50 dark:hover:bg-gray-800"
-                                }`}
-                            >
-                                <span>{icon}</span>
-                                {label}
-                            </Link>
-                        );
-                    })}
-                    <div className="pt-2 border-t border-brown-100 dark:border-gray-800 mt-2">
-                        <button
-                            onClick={handleLogout}
-                            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl smooth-transition"
-                        >
-                            Log out
-                        </button>
-                    </div>
+
+            <div className="mt-auto space-y-2 pt-5">
+                {(!collapsed || isMobile) && <div className="rounded-xl border border-slate-800 bg-slate-950/55 p-3"><p className="truncate font-semibold text-white">{username}</p><p className="mt-1 text-xs text-emerald-400">Intermediate</p></div>}
+                <Link to="/dashboard" title={collapsed && !isMobile ? "Settings" : undefined} className={`flex items-center rounded-xl border border-slate-800 bg-slate-950/55 p-2.5 text-slate-300 hover:border-violet-500/40 hover:bg-violet-500/10 hover:text-violet-200 ${collapsed && !isMobile ? "justify-center" : "justify-center gap-2"}`}><Settings className="h-4 w-4" />{(!collapsed || isMobile) && <span className="text-xs font-semibold">Settings</span>}</Link>
+                <div className={`flex ${collapsed && !isMobile ? "flex-col" : "items-center"} gap-2`}>
+                    <ThemeToggle />
+                    <button onClick={handleLogout} title={collapsed && !isMobile ? "Log out" : undefined} className={`btn flex border border-slate-800 bg-slate-950/55 p-2.5 text-slate-300 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 ${collapsed && !isMobile ? "justify-center" : "flex-1 items-center justify-center gap-2"}`}><LogOut className="h-4 w-4" />{(!collapsed || isMobile) && <span className="text-xs">Log out</span>}</button>
                 </div>
-            )}
-        </nav>
+            </div>
+        </>
+    );
+
+    return (
+        <>
+            <aside className={`hidden h-screen shrink-0 flex-col border-r border-slate-800 app-sidebar bg-[#050914]/92 p-4 shadow-[12px_0_40px_rgba(0,0,0,0.16)] backdrop-blur-xl transition-[width] duration-300 lg:flex ${collapsed ? "w-20" : "w-72"}`}>
+                {sidebarContent()}
+            </aside>
+            <button onClick={() => setMobileOpen(true)} className="fixed left-4 top-4 z-40 rounded-xl border border-slate-700 bg-[#050914]/90 p-3 text-white shadow-xl backdrop-blur lg:hidden" aria-label="Open sidebar"><Menu className="h-5 w-5" /></button>
+            {mobileOpen && <div className="fixed inset-0 z-50 lg:hidden"><button className="absolute inset-0 bg-slate-950/70" onClick={() => setMobileOpen(false)} aria-label="Close sidebar" /><aside className="relative flex h-full w-72 max-w-[86vw] flex-col app-sidebar bg-[#050914] p-5 shadow-2xl slide-in-right">{sidebarContent(true)}</aside></div>}
+        </>
     );
 }
+
+
+
+
+
+

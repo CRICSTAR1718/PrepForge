@@ -277,6 +277,26 @@ export const submitLog = async (req, res) => {
     }
 };
 
+export const getLatestEvaluation = async (req, res) => {
+    try {
+        const log = await DailyLog.findOne({
+            userId: req.user.id,
+            submitted: true,
+        }).sort({ updatedAt: -1, date: -1 });
+
+        if (!log) {
+            return res.status(404).json({
+                success: false,
+                message: "No submitted evaluation found yet.",
+            });
+        }
+
+        return res.status(200).json({ success: true, data: log });
+    } catch (error) {
+        console.error("getLatestEvaluation error:", error);
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+};
 export const getLogById = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -304,3 +324,4 @@ export const getAllLogs = async (req, res) => {
         return res.status(500).json({ success: false, message: "Server error" });
     }
 };
+
