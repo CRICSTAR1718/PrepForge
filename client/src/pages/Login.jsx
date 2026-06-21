@@ -4,6 +4,8 @@ import { BarChart3, Brain, CheckCircle2, Eye, EyeOff, LockKeyhole, Mail, Target 
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { getMyPlan } from "../services/planService";
+import logoPng from "../assets/logo.png";
+
 
 const HIGHLIGHTS = [
     { icon: Target, title: "Smart Planning", text: "AI-powered plans tailored to your goals." },
@@ -60,14 +62,13 @@ export default function Login() {
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_22%,rgba(139,92,246,0.65),transparent_30%),radial-gradient(circle_at_20%_88%,rgba(79,70,229,0.35),transparent_28%)]" />
 
                     <div className="relative z-10 flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-white to-violet-300 text-xl font-black text-violet-800">P</div>
+                        <img src={logoPng} alt="PrepForge" className="h-14 w-14 object-contain" />
                         <p className="text-2xl font-black text-white">Prep<span className="text-violet-300">Forge</span></p>
                     </div>
                     <div className="relative z-10 mt-12 max-w-md xl:mt-16">
                         <h1 className="text-[1.9rem] sm:text-[2.6rem] font-black leading-[1.2] text-white">
                             Plan, Execute, Evaluate, <span className="text-violet-300">Improve.</span>
                         </h1>
-                        
                     </div>
 
                     <div className="relative z-10 mt-6 space-y-2.5 xl:mt-8">
@@ -88,7 +89,7 @@ export default function Login() {
                 <section className="flex items-center justify-center overflow-hidden bg-white px-6 py-8 text-slate-950 dark:bg-slate-950 dark:text-slate-100 sm:px-10 sm:py-10 lg:px-16 lg:py-0">
                     <div className="w-full max-w-md transform scale-95 rounded-[32px] border border-slate-200/70 bg-white/95 p-8 shadow-[0_28px_70px_rgba(15,23,42,0.12)] transition-colors duration-300 dark:border-slate-800/70 dark:bg-slate-900/95">
                         <div className="mb-10 text-center">
-                            <p className="mx-auto mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 lg:hidden">P</p>
+                            <img src={logoPng} alt="PrepForge" className="mx-auto mb-5 h-11 w-11 object-contain lg:hidden" />
                             <h1 className="text-4xl font-black text-slate-950 dark:text-white">Welcome back!</h1>
                             <p className="mt-3 text-lg text-slate-600 dark:text-slate-400">Login to continue your learning journey</p>
                         </div>

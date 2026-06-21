@@ -1,4 +1,6 @@
 import { useState } from "react";
+import logoPng from "../../assets/logo.png";
+
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Bot, CalendarCheck, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, Home, LogOut, Menu, Settings, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -29,7 +31,7 @@ export default function Navbar() {
         <>
             <div className={`flex items-center ${collapsed && !isMobile ? "justify-center" : "gap-3"}`}>
                 <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 overflow-hidden">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-lg font-black text-white shadow-[0_0_24px_rgba(124,58,237,0.35)]">P</div>
+                    <img src={logoPng} alt="PrepForge" className="h-11 w-11 object-contain" />
                     {(!collapsed || isMobile) && <div className="whitespace-nowrap"><p className="font-black text-white">Prep<span className="gradient-text">Forge</span></p><p className="text-[11px] text-slate-500">Forge. Practice. Perform.</p></div>}
                 </Link>
                 {!isMobile && <button onClick={() => setCollapsed((value) => !value)} className="ml-auto rounded-lg p-2 text-slate-400 hover:bg-white/[0.06] hover:text-white" aria-label="Toggle sidebar">{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button>}
@@ -52,7 +54,7 @@ export default function Navbar() {
                 <Link to="/dashboard" title={collapsed && !isMobile ? "Settings" : undefined} className={`flex items-center rounded-xl border border-slate-800 bg-slate-950/55 p-2.5 text-slate-300 hover:border-violet-500/40 hover:bg-violet-500/10 hover:text-violet-200 ${collapsed && !isMobile ? "justify-center" : "justify-center gap-2"}`}><Settings className="h-4 w-4" />{(!collapsed || isMobile) && <span className="text-xs font-semibold">Settings</span>}</Link>
                 <div className={`flex ${collapsed && !isMobile ? "flex-col" : "items-center"} gap-2`}>
                     <ThemeToggle />
-                    <button onClick={handleLogout} title={collapsed && !isMobile ? "Log out" : undefined} className={`btn flex border border-slate-800 bg-slate-950/55 p-2.5 text-slate-300 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 ${collapsed && !isMobile ? "justify-center" : "flex-1 items-center justify-center gap-2"}`}><LogOut className="h-4 w-4" />{(!collapsed || isMobile) && <span className="text-xs">Log out</span>}</button>
+                    <button onClick={handleLogout} title={collapsed && !isMobile ? "Log out" : undefined} className={`btn flex border border-slate-800 bg-slate-950/55 p-2.5 text-slate-300 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 dark:border-slate-800 dark:bg-slate-950/55 dark:hover:border-red-500/40 dark:hover:bg-red-500/10 dark:hover:text-red-300 ${collapsed && !isMobile ? "justify-center" : "flex-1 items-center justify-center gap-2"}`}><LogOut className="h-4 w-4" />{(!collapsed || isMobile) && <span className="text-xs">Log out</span>}</button>
                 </div>
             </div>
         </>
