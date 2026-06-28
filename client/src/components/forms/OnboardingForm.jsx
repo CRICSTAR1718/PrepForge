@@ -9,10 +9,13 @@ const domainDescriptions = {
     Aptitude: "Quantitative, logical reasoning, verbal, and data interpretation.",
 };
 
-const OnboardingForm = ({ onSubmit, loading }) => {
+const OnboardingForm = ({ onSubmit, loading, initialLevel }) => {
     const [domain, setDomain] = useState("");
     const [durationDays, setDurationDays] = useState(30);
     const [error, setError] = useState("");
+
+    const [level, setLevel] = useState(initialLevel || "Beginner");
+
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -21,7 +24,7 @@ const OnboardingForm = ({ onSubmit, loading }) => {
             return;
         }
         setError("");
-        onSubmit({ domain, durationDays });
+        onSubmit({ domain, durationDays, level });
     };
 
     return (
@@ -38,8 +41,8 @@ const OnboardingForm = ({ onSubmit, loading }) => {
                             type="button"
                             onClick={() => setDomain(d)}
                             className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${domain === d
-                                    ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:border-indigo-400"
-                                    : "border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600"
+                                ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:border-indigo-400"
+                                : "border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600"
                                 }`}
                         >
                             <p className="font-semibold text-gray-900 dark:text-white">{d}</p>
@@ -50,6 +53,28 @@ const OnboardingForm = ({ onSubmit, loading }) => {
                     ))}
                 </div>
                 {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+            </div>
+
+            {/* Level selection */}
+            <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Select your current level
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {["Beginner", "Intermediate", "Advanced"].map((lvl) => (
+                        <button
+                            key={lvl}
+                            type="button"
+                            onClick={() => setLevel(lvl)}
+                            className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${level === lvl
+                                ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:border-indigo-400"
+                                : "border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600"
+                                }`}
+                        >
+                            <p className="font-semibold text-gray-900 dark:text-white">{lvl}</p>
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Duration selection */}

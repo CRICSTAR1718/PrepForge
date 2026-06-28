@@ -9,11 +9,21 @@ export const AuthProvider = ({ children }) => {
     );
 
     const login = (userData, accessToken, refreshToken) => {
+        const syncedUser = {
+            ...userData,
+            level: userData.level ?? null,
+            levelTestScore: userData.levelTestScore ?? null,
+            levelTestCompleted: userData.levelTestCompleted ?? false,
+        };
+
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
-        localStorage.setItem("user", JSON.stringify(userData));
-        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(syncedUser));
+        setUser(syncedUser);
     };
+
+    // keep localStorage user in sync with any later updates
+    // (some pages rely on these fields for redirects)
 
     const logout = () => {
         localStorage.removeItem("accessToken");

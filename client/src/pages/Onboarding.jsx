@@ -1,19 +1,31 @@
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import OnboardingForm from "../components/forms/OnboardingForm";
 import usePlan from "../hooks/usePlan";
 
 const Onboarding = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const stateLevel = location?.state?.level;
+
     const { generatePlan, loading, error } = usePlan();
 
-    const handleSubmit = async ({ domain, durationDays }) => {
+    const handleSubmit = async ({ domain, durationDays, level }) => {
         try {
-            await generatePlan(domain, durationDays);
-            navigate("/plan");
+            await generatePlan(domain, durationDays, level);
+
+            // Backend now verifies all levels (including Beginner) via MCQ.
+            // After failing a test, user is expected to switch to the suggested lower level
+            // and then proceed with plan generation.
+            // So we always go to dashboard after plan generation.
+            navigate("/dashboard");
         } catch {
             // error is already set in usePlan, shown below
         }
     };
+
+
+
+
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4">
@@ -31,7 +43,8 @@ const Onboarding = () => {
 
                 {/* Card */}
                 <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-8">
-                    <OnboardingForm onSubmit={handleSubmit} loading={loading} />
+                    <OnboardingForm onSubmit={handleSubmit} loading={loading} initialLevel={stateLevel} />
+
                     {error && (
                         <p className="text-red-500 text-sm text-center mt-4">{error}</p>
                     )}

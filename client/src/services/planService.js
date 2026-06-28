@@ -1,8 +1,8 @@
 import api from "./api";
 
 // Generate a new plan (calls OpenAI on the backend)
-export const createPlan = async (domain, durationDays) => {
-    const { data } = await api.post("/plans", { domain, durationDays });
+export const createPlan = async (domain, durationDays, level) => {
+    const { data } = await api.post("/plans", { domain, durationDays, level });
     return data.plan;
 };
 

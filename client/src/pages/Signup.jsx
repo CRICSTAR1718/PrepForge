@@ -44,7 +44,7 @@ export default function Signup() {
         try {
             const res = await api.post("/auth/signup", form);
             login(res.data.user, res.data.accessToken, res.data.refreshToken);
-            navigate("/dashboard");
+            navigate("/onboarding");
         } catch (err) {
             setError(err.response?.data?.message || "Signup failed");
         } finally {

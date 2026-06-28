@@ -6,11 +6,12 @@ const usePlan = () => {
     const { plan, setPlan, loading, setLoading, error, setError } = usePlanContext();
 
     // Called from the Onboarding page after form submit
-    const generatePlan = useCallback(async (domain, durationDays) => {
+    const generatePlan = useCallback(async (domain, durationDays, level) => {
         setLoading(true);
+        void level; // reserved for level-aware plan generation
         setError(null);
         try {
-            const newPlan = await createPlan(domain, durationDays);
+            const newPlan = await createPlan(domain, durationDays, level);
             setPlan(newPlan);
             return newPlan;
         } catch (err) {

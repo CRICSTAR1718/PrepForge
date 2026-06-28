@@ -6,11 +6,15 @@ import { successResponse, errorResponse } from "../utils/apiResponse.js";
 // POST /api/plans
 const createPlan = async (req, res) => {
     try {
-        const { domain, durationDays } = req.body;
+        const { domain, durationDays, level } = req.body;
 
         if (!domain || !durationDays) {
             return res.status(400).json(errorResponse("Domain and durationDays are required."));
         }
+
+        // level is optional for backward compatibility
+        const validLevels = ["Beginner", "Intermediate", "Advanced"];
+        const normalizedLevel = level && validLevels.includes(level) ? level : "Beginner";
 
         const validDomains = ["DSA", "Full Stack", "Aptitude"];
         if (!validDomains.includes(domain)) {
@@ -21,7 +25,10 @@ const createPlan = async (req, res) => {
             return res.status(400).json(errorResponse("Duration must be between 15 and 90 days."));
         }
 
-        const days = await generatePlan(domain, durationDays);
+        const days = await generatePlan(domain, durationDays, normalizedLevel);
+
+        // Persist selected level on user (so redirects & future prompts work)
+        await User.findByIdAndUpdate(req.user.id, { level: normalizedLevel });
 
         const plan = await Plan.create({
             userId: req.user.id,

@@ -36,6 +36,9 @@ export const signup = async (req, res) => {
                 email: user.email,
                 domain: user.domain,
                 planDuration: user.planDuration,
+                level: user.level,
+                levelTestScore: user.levelTestScore,
+                levelTestCompleted: user.levelTestCompleted,
             },
         });
     } catch (err) {

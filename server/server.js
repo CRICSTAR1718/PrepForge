@@ -8,6 +8,8 @@ import authRoutes from "./routes/auth.js";
 import planRoutes from "./routes/plans.js";
 import logRoutes from "./routes/logs.js";
 import mentorRouter from "./routes/mentor.js";
+import levelTestRouter from "./routes/levelTest.js";
+
 
 const app = express();
 
@@ -20,6 +22,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/plans", planRoutes);
 app.use("/api/logs", logRoutes);
 app.use("/api/mentor", mentorRouter);
+app.use("/api/level-test", levelTestRouter);
+
 
 // Health check for Gemini API key
 app.get("/api/health/gemini", (req, res) => {

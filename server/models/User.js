@@ -36,6 +36,23 @@ const userSchema = new mongoose.Schema(
             ref: "Plan",
             default: null,
         },
+
+        // Level onboarding + verification
+        level: {
+            type: String,
+            enum: ["Beginner", "Intermediate", "Advanced"],
+            default: null,
+        },
+
+        levelTestScore: {
+            type: Number,
+            default: null,
+        },
+
+        levelTestCompleted: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true, // adds createdAt and updatedAt automatically

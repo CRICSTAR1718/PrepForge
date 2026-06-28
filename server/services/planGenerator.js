@@ -1,8 +1,9 @@
 import geminiModel from "./openai/openaiClient.js";
 import { getPlanGenerationPrompt } from "./openai/prompts.js";
 
-const generatePlan = async (domain, durationDays) => {
-    const prompt = getPlanGenerationPrompt(domain, durationDays);
+const generatePlan = async (domain, durationDays, level) => {
+    const prompt = getPlanGenerationPrompt(domain, durationDays, level);
+
 
     const result = await geminiModel.generateContent(prompt);
     const rawText = result.response.text().trim();

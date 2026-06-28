@@ -5,7 +5,7 @@ const protect = async (req, res, next) => {
     try {
         // 1. Check if token exists in the Authorization header
         const authHeader = req.headers.authorization;
-        console.log("[authMiddleware] Authorization header:", authHeader);
+        // console.log("[authMiddleware] Authorization header:", authHeader);
 
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
             console.warn("[authMiddleware] Missing or malformed Authorization header");

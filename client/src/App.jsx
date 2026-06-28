@@ -9,6 +9,37 @@ import Plan from "./pages/Plan";
 import Tracker from "./pages/Tracker";
 import Result from "./pages/Result";
 import Mentor from "./pages/Mentor";
+import LevelTest from "./pages/LevelTest";
+
+const RedirectToAppropriateStep = () => {
+  const { user } = useAuth();
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  // NOTE: client-side routing uses whatever fields are available in `user`.
+  // Backend test persists `levelTestCompleted`, but we need this to exist
+  // in the user object returned by /auth/* for perfect correctness.
+  // For MVP, default to onboarding if missing.
+  // Persisted user object might be missing levelTestCompleted initially.
+  // treat undefined/null as not completed.
+  const levelTestCompleted = user.levelTestCompleted === true;
+
+  if (!user.domain) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (!levelTestCompleted) {
+    // If user is at least intermediate/advanced, they should go to the test.
+    // Otherwise onboarding will let them (re)select.
+    const level = user.level;
+    if (level && level !== "Beginner") {
+      return <Navigate to="/level-test" replace />;
+    }
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
+};
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -33,13 +64,84 @@ export default function App() {
     <Routes>
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-      <Route path="/dashboard" element={<ProtectedWithNav><Dashboard /></ProtectedWithNav>} />
-      <Route path="/plan" element={<ProtectedWithNav><Plan /></ProtectedWithNav>} />
-      <Route path="/tracker" element={<ProtectedWithNav><Tracker /></ProtectedWithNav>} />
-      <Route path="/result" element={<ProtectedWithNav><Result /></ProtectedWithNav>} />
-      <Route path="/result/:logId" element={<ProtectedWithNav><Result /></ProtectedWithNav>} />
-      <Route path="/mentor" element={<ProtectedWithNav><Mentor /></ProtectedWithNav>} />
+      <Route
+        path="/onboarding"
+        element={
+          <ProtectedRoute>
+            <Onboarding />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedWithNav>
+            <Dashboard />
+          </ProtectedWithNav>
+        }
+      />
+      <Route
+        path="/plan"
+        element={
+          <ProtectedWithNav>
+            <Plan />
+          </ProtectedWithNav>
+        }
+      />
+      <Route
+        path="/tracker"
+        element={
+          <ProtectedWithNav>
+            <Tracker />
+          </ProtectedWithNav>
+        }
+      />
+      <Route
+        path="/result"
+        element={
+          <ProtectedWithNav>
+            <Result />
+          </ProtectedWithNav>
+        }
+      />
+      <Route
+        path="/result/:logId"
+        element={
+          <ProtectedWithNav>
+            <Result />
+          </ProtectedWithNav>
+        }
+      />
+      <Route
+        path="/mentor"
+        element={
+          <ProtectedWithNav>
+            <Mentor />
+          </ProtectedWithNav>
+        }
+      />
+
+      <Route
+        path="/level-test/:level"
+        element={
+          <ProtectedWithNav>
+            <LevelTest />
+          </ProtectedWithNav>
+        }
+      />
+      <Route
+        path="/level-test"
+        element={<Navigate to="/onboarding" replace />}
+      />
+
+
+      <Route
+        path="/"
+        element={
+          <RedirectToAppropriateStep />
+        }
+      />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
   );

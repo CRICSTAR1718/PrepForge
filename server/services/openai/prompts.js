@@ -1,15 +1,22 @@
-const getPlanGenerationPrompt = (domain, durationDays) => {
-    const domainContext = {
-        DSA: "Data Structures and Algorithms — covering arrays, strings, linked lists, stacks, queues, trees, graphs, dynamic programming, sorting, searching, and problem-solving on platforms like LeetCode.",
-        "Full Stack":
-            "Full Stack Web Development — covering HTML/CSS, JavaScript, React, Node.js, Express, MongoDB, REST APIs, authentication, and deployment.",
-        Aptitude:
-            "Aptitude for campus placements — covering quantitative aptitude, logical reasoning, verbal ability, data interpretation, and puzzle-solving.",
-    };
+const getPlanGenerationPrompt = (domain, durationDays, level) => {
+  const domainContext = {
+    DSA: "Data Structures and Algorithms — covering arrays, strings, linked lists, stacks, queues, trees, graphs, dynamic programming, sorting, searching, and problem-solving on platforms like LeetCode.",
+    "Full Stack":
+      "Full Stack Web Development — covering HTML/CSS, JavaScript, React, Node.js, Express, MongoDB, REST APIs, authentication, and deployment.",
+    Aptitude:
+      "Aptitude for campus placements — covering quantitative aptitude, logical reasoning, verbal ability, data interpretation, and puzzle-solving.",
+  };
 
-    return `You are an expert placement preparation coach for engineering students.
+  return `You are an expert placement preparation coach for engineering students.
 
 Generate a structured ${durationDays}-day study plan for the domain: ${domain}.
+
+Student current level: ${level || "Beginner"}.
+
+Level rules:
+- Beginner: focus on foundations first; slower progression; more basic tasks.
+- Intermediate: mix concepts + application; gradually increase difficulty.
+- Advanced: emphasize edge cases, deeper problem solving, and timed practice.
 Domain details: ${domainContext[domain]}
 
 Rules:
