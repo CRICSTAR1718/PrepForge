@@ -138,14 +138,14 @@ const Plan = () => {
                 </div>
 
                 {/* Start button */}
-                <div className="mt-10 text-center">
+                {/* <div className="mt-10 text-center">
                     <button
                         onClick={() => navigate("/tracker")}
                         className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
                     >
                         Start Day 1 →
                     </button>
-                </div>
+                </div> */}
             </div>
         </div>
     );

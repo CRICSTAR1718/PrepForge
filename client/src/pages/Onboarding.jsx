@@ -13,19 +13,13 @@ const Onboarding = () => {
         try {
             await generatePlan(domain, durationDays, level);
 
-            // Backend now verifies all levels (including Beginner) via MCQ.
-            // After failing a test, user is expected to switch to the suggested lower level
-            // and then proceed with plan generation.
-            // So we always go to dashboard after plan generation.
-            navigate("/dashboard");
+            // Plan is generated, but the user's level still needs to be
+            // verified via the MCQ level test before they reach the dashboard.
+            navigate(`/level-test/${encodeURIComponent(level)}`);
         } catch {
             // error is already set in usePlan, shown below
         }
     };
-
-
-
-
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4">

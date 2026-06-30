@@ -49,7 +49,10 @@ const LevelTest = () => {
         setLoading(true);
         setError("");
         try {
-            const res = await api.post("/level-test/run", { level, answers });
+            // IMPORTANT: send back the exact `questions` the user was shown,
+            // so the backend scores against the same quiz instead of a
+            // freshly-regenerated one.
+            const res = await api.post("/level-test/run", { level, answers, questions });
             const data = res.data;
             setPassed(data.passed);
             setScore(data.score);
@@ -196,4 +199,3 @@ const LevelTest = () => {
 };
 
 export default LevelTest;
-

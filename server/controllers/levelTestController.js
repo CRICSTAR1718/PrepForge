@@ -8,12 +8,12 @@ const clampLevelDown = (level) => {
 };
 
 // POST /api/level-test/run
-// Body: { level }
+// Body: { level } OR { level, answers, questions }
 // Returns: { passed: boolean, score: number, questions?: [...], suggestedLevel?: string }
 // Side effect: persists level onboarding + test results to User.
 export const runLevelTest = async (req, res) => {
     try {
-        const { level } = req.body || {};
+        const { level, answers, questions: submittedQuestions } = req.body || {};
 
         const validLevels = ["Beginner", "Intermediate", "Advanced"];
         if (!level || !validLevels.includes(level)) {
@@ -23,15 +23,9 @@ export const runLevelTest = async (req, res) => {
         // Persist selected level
         await User.findByIdAndUpdate(req.user.id, { level });
 
-        // Generate MCQ test for Beginner/Intermediate/Advanced
-        // (Previously Beginner was auto-skipped; now it also gets verified.)
-        const test = await generateLevelTest(level);
-
-
-        const answers = req.body?.answers;
-
-        // If answers aren't provided yet, just return questions.
+        // No answers yet -> first call, generate and return questions
         if (!answers || typeof answers !== "object") {
+            const test = await generateLevelTest(level);
             return res.status(200).json({
                 passed: null,
                 score: null,
@@ -40,13 +34,16 @@ export const runLevelTest = async (req, res) => {
             });
         }
 
-        // Score: compare selected option keys (A-D) against answerKey.
-        // Frontend sends answers like: { [questionId]: "A"|"B"|"C"|"D" }
-        // Be tolerant of missing/undefined values.
-        const total = test.questions.length;
+        // Scoring call -> MUST use the SAME questions the user was shown,
+        // not a freshly-regenerated set (that was the bug causing bogus scores).
+        if (!Array.isArray(submittedQuestions) || submittedQuestions.length === 0) {
+            return res.status(400).json({ message: "Missing original questions for scoring." });
+        }
+
+        const total = submittedQuestions.length;
         let correct = 0;
 
-        for (const q of test.questions) {
+        for (const q of submittedQuestions) {
             const userPick = answers[q.id];
             const answerKey = q.answerKey;
             if (!userPick || !answerKey) continue;
@@ -54,7 +51,6 @@ export const runLevelTest = async (req, res) => {
                 correct += 1;
             }
         }
-
 
         const score = Math.round((correct / total) * 100);
         const passed = score >= 50;
@@ -69,7 +65,7 @@ export const runLevelTest = async (req, res) => {
         return res.status(200).json({
             passed,
             score,
-            questions: test.questions,
+            questions: submittedQuestions,
             suggestedLevel: passed ? undefined : lowerLevel,
         });
     } catch (err) {
@@ -87,5 +83,3 @@ export const runLevelTest = async (req, res) => {
         return res.status(500).json({ message: msg });
     }
 };
-
-
