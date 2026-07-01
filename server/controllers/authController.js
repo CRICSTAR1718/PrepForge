@@ -36,6 +36,7 @@ export const signup = async (req, res) => {
                 email: user.email,
                 domain: user.domain,
                 planDuration: user.planDuration,
+                currentPlanId: user.currentPlanId,
                 level: user.level,
                 levelTestScore: user.levelTestScore,
                 levelTestCompleted: user.levelTestCompleted,
@@ -84,6 +85,9 @@ export const login = async (req, res) => {
                 domain: user.domain,
                 planDuration: user.planDuration,
                 currentPlanId: user.currentPlanId,
+                level: user.level,
+                levelTestScore: user.levelTestScore,
+                levelTestCompleted: user.levelTestCompleted,
             },
         });
     } catch (err) {

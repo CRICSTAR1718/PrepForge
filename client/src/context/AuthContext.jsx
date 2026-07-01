@@ -22,8 +22,19 @@ export const AuthProvider = ({ children }) => {
         setUser(syncedUser);
     };
 
-    // keep localStorage user in sync with any later updates
-    // (some pages rely on these fields for redirects)
+    // Patches the cached user object (e.g. after plan generation sets
+    // `domain`, or after the level test sets `levelTestCompleted`/`level`).
+    // Without this, a freshly opened tab reads the stale user object from
+    // localStorage and the redirect logic in App.jsx sends it back to
+    // onboarding even though the backend state has moved on.
+    const updateUser = (patch) => {
+        setUser((prev) => {
+            if (!prev) return prev;
+            const next = { ...prev, ...patch };
+            localStorage.setItem("user", JSON.stringify(next));
+            return next;
+        });
+    };
 
     const logout = () => {
         localStorage.removeItem("accessToken");
@@ -33,7 +44,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout }}>
+        <AuthContext.Provider value={{ user, login, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

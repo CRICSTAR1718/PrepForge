@@ -1,32 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
-
+import { useAuth } from "../context/AuthContext";
 
 const LevelTest = () => {
     const navigate = useNavigate();
+    const { updateUser } = useAuth();
 
     const { level: levelParam } = useParams();
 
     const [level] = useState(() => {
-        // Prefer URL param so refresh/navigation never falls back to Beginner.
         const normalized = typeof levelParam === "string" ? decodeURIComponent(levelParam) : null;
         return normalized || "Beginner";
     });
 
-
-    // store selected level for debugging
-    // console.log("[LevelTest] selected level", initialLevel, "using", level);
     const [loading, setLoading] = useState(false);
-
     const [error, setError] = useState("");
-
     const [questions, setQuestions] = useState([]);
     const [score, setScore] = useState(null);
     const [passed, setPassed] = useState(null);
     const [suggestedLevel, setSuggestedLevel] = useState(null);
-
-    const [answers, setAnswers] = useState({}); // { [questionId]: "A"|"B"|"C"|"D" }
+    const [answers, setAnswers] = useState({});
 
     const runInitial = async (lvl) => {
         setLoading(true);
@@ -49,14 +43,22 @@ const LevelTest = () => {
         setLoading(true);
         setError("");
         try {
-            // IMPORTANT: send back the exact `questions` the user was shown,
-            // so the backend scores against the same quiz instead of a
-            // freshly-regenerated one.
+            // Send back the exact questions the user was shown so the backend
+            // scores against the same quiz — not a freshly-regenerated one.
             const res = await api.post("/level-test/run", { level, answers, questions });
             const data = res.data;
             setPassed(data.passed);
             setScore(data.score);
             setSuggestedLevel(data.suggestedLevel || null);
+
+            // Sync result into cached user so new tabs / refreshes don't
+            // re-route back to onboarding or level-test.
+            if (data.passed) {
+                updateUser({ levelTestCompleted: true, level });
+            } else {
+                // Backend already clamped the level down — reflect that too.
+                updateUser({ level: data.suggestedLevel || level });
+            }
         } catch (err) {
             setError(err.response?.data?.message || "Failed to submit level test");
         } finally {
@@ -66,16 +68,7 @@ const LevelTest = () => {
 
     useEffect(() => {
         if (!level) return;
-        const controller = new AbortController();
-        const run = async () => {
-            try {
-                await runInitial(level);
-            } catch {
-                // ignore
-            }
-        };
-        run();
-        return () => controller.abort();
+        runInitial(level);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [level]);
 
@@ -105,23 +98,16 @@ const LevelTest = () => {
 
         return (
             <div className="mt-6 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900">
-                <p className="font-bold">Test Not Passed — Reassign Suggested</p>
+                <p className="font-bold">Test Not Passed</p>
                 <p className="text-sm">
                     Your score: {score}/100. Suggested level: {suggestedLevel}
                 </p>
                 <button
-                    onClick={() => {
-                        // If they fail, prompt them to switch to the suggested lower level.
-                        // Backend already returns suggestedLevel for score < 50.
-                        const nextLevel = suggestedLevel || "Beginner";
-                        // Go back to onboarding and preselect the level.
-                        navigate("/onboarding", { state: { level: nextLevel } });
-                    }}
+                    onClick={() => navigate("/onboarding", { state: { level: suggestedLevel || "Beginner" } })}
                     className="mt-4 w-full py-3 px-4 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700"
                 >
                     Switch to {suggestedLevel || "Beginner"} →
                 </button>
-
             </div>
         );
     }, [error, loading, passed, score, suggestedLevel, navigate]);
@@ -191,8 +177,6 @@ const LevelTest = () => {
                 )}
 
                 {resultCard}
-
-                {/* MVP: backend currently auto-scores in /run. */}
             </div>
         </div>
     );

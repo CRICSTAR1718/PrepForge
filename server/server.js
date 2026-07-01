@@ -3,6 +3,9 @@ dotenv.config();
 
 import express from "express";
 import cors from "cors";
+import { existsSync } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import connectDB from "./config/database.js";
 import authRoutes from "./routes/auth.js";
 import planRoutes from "./routes/plans.js";
@@ -10,8 +13,10 @@ import logRoutes from "./routes/logs.js";
 import mentorRouter from "./routes/mentor.js";
 import levelTestRouter from "./routes/levelTest.js";
 
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const app = express();
+const clientDistPath = path.resolve(__dirname, "../client/dist");
 
 app.use(cors());
 app.use(express.json());
@@ -24,6 +29,22 @@ app.use("/api/logs", logRoutes);
 app.use("/api/mentor", mentorRouter);
 app.use("/api/level-test", levelTestRouter);
 
+
+if (existsSync(clientDistPath)) {
+    app.use(express.static(clientDistPath));
+}
+
+app.use((req, res, next) => {
+    if (req.path.startsWith("/api/")) {
+        return next();
+    }
+
+    if (existsSync(clientDistPath)) {
+        return res.sendFile(path.join(clientDistPath, "index.html"));
+    }
+
+    return next();
+});
 
 // Health check for Gemini API key
 app.get("/api/health/gemini", (req, res) => {
