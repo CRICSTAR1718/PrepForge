@@ -7,7 +7,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Create a wrapper that tries multiple models
 const createGeminiModel = () => {
-    const modelOptions = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    const modelOptions = [
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-3-flash",
+        "gemini-3.1-flash-lite"
+    ];
 
     return {
         async generateContent(prompt) {
